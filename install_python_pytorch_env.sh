@@ -84,8 +84,8 @@ if [ "$env_type" = "conda" ]; then
   mamba deactivate
 
   {
-    echo "alias activateLLM=\"conda activate ""$env_name""\""
-    echo "alias llms=\"conda activate ""$env_name""; cd ""$script_path""\""
+    echo "alias activateLA=\"conda activate ""$env_name""\""
+    echo "alias legible_agents=\"conda activate ""$env_name""; cd ""$script_path""\""
   } >> ~/.bash_aliases
 
   env_home="$HOME"/miniconda3/envs/"$env_name"
@@ -96,7 +96,7 @@ if [ "$env_type" = "conda" ]; then
   touch "$env_home"/etc/conda/deactivate.d/env_vars.sh
   {
     echo "#!/bin/sh"
-    echo "EXTRA_PATH=""$script_path""/legibility/src:""$script_path""/llms/src"
+    echo "EXTRA_PATH=""$script_path""/src"
     echo "OLD_PYTHONPATH=\$PYTHONPATH"
     echo "PYTHONPATH=\$EXTRA_PATH:\$PYTHONPATH"
     echo "OLD_PATH=\$PATH"
@@ -148,8 +148,8 @@ else
   deactivate
 
   {
-    echo "alias activateLLM=\"source \"\$HOME\"/python_envs/""$env_name""/bin/activate\""
-    echo "alias llms=\"source \"\$HOME\"/python_envs/""$env_name""/bin/activate; cd ""$script_path""\""
+    echo "alias activateLA=\"source \"\$HOME\"/python_envs/""$env_name""/bin/activate\""
+    echo "alias legible_agents=\"source \"\$HOME\"/python_envs/""$env_name""/bin/activate; cd ""$script_path""\""
   } >> ~/.bash_aliases
 
   {

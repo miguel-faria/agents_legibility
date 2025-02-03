@@ -97,8 +97,8 @@ if [ "$env_type" = "conda" ]; then
   mamba deactivate
 
   {
-    echo "alias activateDRL=\"conda activate ""$env_name""\""
-    echo "alias deepRL=\"conda activate ""$env_name""; cd ""$script_path""\""
+    echo "alias activateLA=\"conda activate ""$env_name""\""
+    echo "alias legible_agents=\"conda activate ""$env_name""; cd ""$script_path""\""
   } >> ~/.bash_aliases
 
   env_home="$HOME"/miniconda3/envs/"$env_name"
@@ -109,7 +109,7 @@ if [ "$env_type" = "conda" ]; then
   touch "$env_home"/etc/conda/deactivate.d/env_vars.sh
   {
     echo "#!/bin/sh"
-    echo "EXTRA_PATH=""$script_path""/legibility/src:""$script_path""/llms/src"
+    echo "EXTRA_PATH=""$script_path""/src"
     echo "OLD_PYTHONPATH=\$PYTHONPATH"
     echo "PYTHONPATH=\$EXTRA_PATH:\$PYTHONPATH"
     echo "OLD_PATH=\$PATH"
@@ -161,12 +161,12 @@ else
   deactivate
 
   {
-    echo "alias activateDRL=\"source \"\$HOME\"/python_envs/""$env_name""/bin/activate\""
-    echo "alias deepRL=\"source \"\$HOME\"/python_envs/""$env_name""/bin/activate; cd ""$script_path""\""
+    echo "alias activateLA=\"source \"\$HOME\"/python_envs/""$env_name""/bin/activate\""
+    echo "alias legible_agents=\"source \"\$HOME\"/python_envs/""$env_name""/bin/activate; cd ""$script_path""\""
   } >> ~/.bash_aliases
 
   {
-    echo "EXTRA_PATH=""$script_path""/legibility/src"
+    echo "EXTRA_PATH=""$script_path""/src"
     echo "PYTHONPATH=\$EXTRA_PATH:\$PYTHONPATH"
     echo "PATH=/usr/local/cuda/bin:\$PATH"
     echo "LD_LIBRARY_PATH=/usr/local/cuda/lib64:\$LD_LIBRARY_PATH"
