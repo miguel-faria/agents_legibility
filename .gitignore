@@ -139,13 +139,8 @@ cython_debug/
 
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Python
 
-legibility/logs/
-legibility/wandb/
-legibility/models/
-legibility/data/performances/
-legibility/data/stills/
-llms/wandb/
-llms/src/wandb/
-llms/data/results/
-
+logs/
+models/
+data/performances/
+data/stills/
 .idea/

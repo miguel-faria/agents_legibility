@@ -14,6 +14,7 @@ do
     -t|--type) env_type=${2} ; shift ;;
     -c|--conda) conda_home=${2} ; shift ;;
     -p|--python) python_ver=${2} ; shift ;;
+    --llm) use_llms=${2} ; shift ;;
     (--) shift; break ;;
     (-*) echo "$0: error - unrecognized option $1" 1>&2; exit 1 ;;
     (*) break ;;
@@ -27,6 +28,10 @@ fi
 
 if [ -z "$env_type" ]; then
   env_type="pip"
+fi
+
+if [ -z "$use_llms" ]; then
+  use_llms=0
 fi
 
 if [ -z "$conda_home" ]; then
@@ -75,11 +80,14 @@ if [ "$env_type" = "conda" ]; then
     mamba install -y pytorch torchvision torchaudio cpuonly -c pytorch
   fi
   mamba install -y -c conda-forge stable-baselines3 tensorboard wandb gymnasium pygame
-  mamba install -y -c huggingface -c conda-forge transformers
-  mamba install -y -c huggingface -c conda-forge datasets
-  mamba install -y -c conda-forge evaluate accelerate
-  mamba install -y -c conda-forge langchain-text-splitters fire google-ai-generativelanguage google-generativeai
-  python3 -m pip install sentencepiece # vllm
+  if [ "$use_llms" -eq 1 ]; then
+    mamba install -y -c huggingface -c conda-forge transformers
+    mamba install -y -c huggingface -c conda-forge datasets
+    mamba install -y -c conda-forge evaluate accelerate
+    mamba install -y -c conda-forge langchain-text-splitters fire google-ai-generativelanguage google-generativeai
+    python3 -m pip install vllm
+    python3 -m pip install vllm
+  fi
 
   mamba deactivate
 
@@ -143,7 +151,10 @@ else
     echo "Cuda version $cuda_version and minor version $cuda_minor not supported by PyTorch. Installing only CPU support."
     python3 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
   fi
-  python3 -m pip install transformers datasets evaluate accelerate # vllm
+
+  if [ "$use_llms" -eq 1 ]; then
+    python3 -m pip install transformers datasets evaluate accelerate vllm
+  fi
 
   deactivate
 
