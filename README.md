@@ -15,11 +15,16 @@ fulfilled by a subset of team members.
 We provide three installation scripts.
 
 - *install_miniconda.sh* - is used to install miniconda if you don't have it installed
-  > source <path-to-dir>/install_miniconda.sh [<path-install-miniconda] 
+
+  > source \<path-to-dir\>/install_miniconda.sh [\<path-install-miniconda\>] 
+
 - *install_python_jax_env.sh* - used to install a python virtual environment (either using conda or venv+pip) that uses JAX for CUDA support
-  > source <path-to-dir>/install_python_jax_env.sh -n <env-name> -t <conda|pip> [--llm 1|0] [-p <python-version>] [-c <path-conda-home]
+
+  > source \<path-to-dir\>/install_python_jax_env.sh -n \<env-name\> -t \<conda|pip\> [--llm 1|0] [-p \<python-version\>] [-c \<path-conda-home\>]
+
 - *install_python_pytorch_env.sh* - used to install a python virtual environment (either using conda or venv+pip) that uses Pytorch for CUDA support
-  > source <path-to-dir>/install_python_pytorch_env.sh -n <env-name> -t <conda|pip> [--llm 1|0] [-p <python-version>] [-c <path-conda-home]
+
+  > source \<path-to-dir\>/install_python_pytorch_env.sh -n \<env-name\> -t \<conda|pip\> [--llm 1|0] [-p \<python-version\>] [-c \<path-conda-home\>]
  
 ## Run
 
