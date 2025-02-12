@@ -23,6 +23,7 @@ from datetime import datetime
 from wandb.wandb_run import Run
 from gymnasium.spaces import MultiBinary, MultiDiscrete
 
+from scripts.run_train_toxic_multi_model import curriculum_path
 
 RNG_SEED = 6102023
 TEST_RNG_SEED = 4072023
@@ -263,9 +264,12 @@ def main():
 	parser.add_argument('--train-targets', dest='train_targets', type=str, nargs='+', required=False, default=None,
 						help='List with the prey ids to train to catch')
 	parser.add_argument('--use-lower-model', dest='use_lower_model', action='store_true',
-	                    help='Flag that signals using curriculum learning using a model with one less food item spawned (when using with only 1 item, defaults to false).')
+	                    help='Flag that signals using curriculum learning using a model with one less prey spawned (when using with only 1 prey, defaults to false).')
 	parser.add_argument('--use-higher-model', dest='use_higher_model', action='store_true',
-	                    help='Flag that signals using curriculum learning using a model with one more food item spawned (when using with only all items, defaults to false).')
+	                    help='Flag that signals using curriculum learning using a model with one more prey spawned (when using with all preys, defaults to false).')
+	parser.add_argument('--use-general-model', dest='use_general_model', action='store_true',
+	                    help='Flag that signals using curriculum learning using a model as initial weights.')
+	parser.add_argument('--curriculum-path', dest='curriculum_path', type=str, default='', help='Path to the curriculum model to use.')
 	parser.add_argument('--warmup-steps', dest='warmup', type=int, required=False, default=10000, help='Number of epochs to pass before training starts')
 
 	# Environment parameters
@@ -310,6 +314,7 @@ def main():
 	debug = args.debug
 	use_lower_model = args.use_lower_model
 	use_higher_model = args.use_higher_model
+	use_general_model = args.use_general_model
 	train_thresh = args.min_train_performance
 	
 	# Pursuit environment args
@@ -447,7 +452,9 @@ def main():
 											 use_gpu, dueling_dqn, use_ddqn, use_vdn, use_cnn, False, cnn_properties=cnn_properties,
 											 buffer_data=(args.buffer_smart_add, args.buffer_method))
 
-			if use_lower_model and n_preys > 1:
+			if use_general_model:
+				curriculum_model_path = args.curriculum_path
+			elif use_lower_model and n_preys > 1:
 				prev_model_path = model_path.parent.absolute() / 'best'
 				logger.info('Model pahth: ' + str(prev_model_path))
 				if (prev_model_path / ('%d-preys_single_model.model' % max(n_preys - 1, 1))).exists():

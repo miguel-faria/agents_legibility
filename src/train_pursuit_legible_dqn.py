@@ -305,6 +305,9 @@ def main():
 	                    help='Flag that signals using curriculum learning using a model with one less food item spawned (when using with only 1 item, defaults to false).')
 	parser.add_argument('--use-higher-model', dest='use_higher_model', action='store_true',
 	                    help='Flag that signals using curriculum learning using a model with one more food item spawned (when using with only all items, defaults to false).')
+	parser.add_argument('--use-general-model', dest='use_general_model', action='store_true',
+	                    help='Flag that signals using curriculum learning using a model as initial weights.')
+	parser.add_argument('--curriculum-path', dest='curriculum_path', type=str, default='', help='Path to the curriculum model to use.')
 	parser.add_argument('--buffer-smart-add', dest='buffer_smart_add', action='store_true',
 	                    help='Flag denoting the use of smart sample add to experience replay buffer instead of first-in first-out')
 	parser.add_argument('--buffer-method', dest='buffer_method', type=str, required=False, default='uniform', choices=['uniform', 'weighted'],
@@ -360,6 +363,7 @@ def main():
 	optim_vdn = args.opt_vdn
 	use_lower_model = args.use_lower_model
 	use_higher_model = args.use_higher_model
+	use_general_model = args.use_general_model
 	
 	# LB-Foraging environment args
 	hunter_ids = args.hunter_ids
@@ -527,7 +531,9 @@ def main():
 				                                 n_legible_agents=min(n_leg_agents, n_hunters), cnn_properties=cnn_properties,
 				                                 buffer_data=(args.buffer_smart_add, args.buffer_method))
 
-			if use_lower_model and n_preys > 1:
+			if use_general_model:
+				curriculum_model_path = args.curriculum_path
+			elif use_lower_model and n_preys > 1:
 				prev_model_path = model_path.parent.absolute() / 'best'
 				logger.info('Model pahth: ' + str(prev_model_path))
 				if (prev_model_path / ('%d-preys_single_model.model' % max(n_preys - 1, 1))).exists():
