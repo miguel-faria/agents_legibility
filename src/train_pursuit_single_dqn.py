@@ -23,8 +23,6 @@ from datetime import datetime
 from wandb.wandb_run import Run
 from gymnasium.spaces import MultiBinary, MultiDiscrete
 
-from scripts.run_train_toxic_multi_model import curriculum_path
-
 RNG_SEED = 6102023
 TEST_RNG_SEED = 4072023
 N_TESTS = 100
