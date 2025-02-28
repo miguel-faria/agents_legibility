@@ -265,6 +265,8 @@ def main():
 	                    help='Flag that signals using curriculum learning using a model with one less prey spawned (when using with only 1 prey, defaults to false).')
 	parser.add_argument('--use-higher-model', dest='use_higher_model', action='store_true',
 	                    help='Flag that signals using curriculum learning using a model with one more prey spawned (when using with all preys, defaults to false).')
+	parser.add_argument('--improve-trained-model', dest='improve_trained_model', action='store_true',
+						help='FLag that signals curriculum learning to continue improving previous trained model for the number of hunters and preys spawned.')
 	parser.add_argument('--use-general-model', dest='use_general_model', action='store_true',
 	                    help='Flag that signals using curriculum learning using a model as initial weights.')
 	parser.add_argument('--curriculum-path', dest='curriculum_path', type=str, default='', help='Path to the curriculum model to use.')
@@ -312,6 +314,7 @@ def main():
 	debug = args.debug
 	use_lower_model = args.use_lower_model
 	use_higher_model = args.use_higher_model
+	improve_trained_model = args.improve_trained_model
 	use_general_model = args.use_general_model
 	train_thresh = args.min_train_performance
 	
@@ -452,11 +455,20 @@ def main():
 
 			if use_general_model:
 				curriculum_model_path = args.curriculum_path
+			elif improve_trained_model:
+				prev_model_path = model_path.parent.absolute() / 'best'
+				logger.info('Model pahth: ' + str(prev_model_path))
+				if (prev_model_path / ('%d-preys_single_model.model' % n_preys)).exists():
+					logger.info('Improving model trained with %d preys spawned' % n_preys)
+					curriculum_model_path = str(prev_model_path / ('%d-preys_single_model.model' % n_preys))
+				else:
+					logger.info('Model with one less prey not found, training from scratch')
+					curriculum_model_path = ''
 			elif use_lower_model and n_preys > 1:
 				prev_model_path = model_path.parent.absolute() / 'best'
 				logger.info('Model pahth: ' + str(prev_model_path))
 				if (prev_model_path / ('%d-preys_single_model.model' % max(n_preys - 1, 1))).exists():
-					logger.info('Using model trained with %d foods spawned as a baseline' % max(n_preys - 1, 1))
+					logger.info('Using model trained with %d preys spawned as a baseline' % max(n_preys - 1, 1))
 					curriculum_model_path = str(prev_model_path / ('%d-preys_single_model.model' % max(n_preys - 1, 1)))
 				else:
 					logger.info('Model with one less prey not found, training from scratch')
@@ -464,7 +476,7 @@ def main():
 			elif use_higher_model and n_preys < n_preys:
 				next_model_path = model_path.parent.absolute() / 'best'
 				if (next_model_path / ('%d-preys_single_model.model' % min(n_preys + 1, n_preys))).exists():
-					logger.info('Using model trained with %d foods spawned as a baseline' % min(n_preys + 1, n_preys))
+					logger.info('Using model trained with %d preys spawned as a baseline' % min(n_preys + 1, n_preys))
 					curriculum_model_path = str(next_model_path / ('%d-preys_single_model.model' % min(n_preys + 1, n_preys)))
 				else:
 					logger.info('Model with one more prey not found, training from scratch')

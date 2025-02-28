@@ -257,6 +257,8 @@ def main():
 	                    help='Flag that signals using curriculum learning using a model with one less food item spawned (when using with only 1 item, defaults to false).')
 	parser.add_argument('--use-higher-model', dest='use_higher_model', action='store_true',
 	                    help='Flag that signals using curriculum learning using a model with one more food item spawned (when using with only all items, defaults to false).')
+	parser.add_argument('--improve-trained-model', dest='improve_trained_model', action='store_true',
+						help='FLag that signals curriculum learning to continue improving previous trained model for the number of food items spawned.')
 	parser.add_argument('--buffer-smart-add', dest='buffer_smart_add', action='store_true',
 	                    help='Flag denoting the use of smart sample add to experience replay buffer instead of first-in first-out')
 	parser.add_argument('--buffer-method', dest='buffer_method', type=str, required=False, default='uniform', choices=['uniform', 'weighted'],
@@ -307,6 +309,7 @@ def main():
 	tags = args.tags if args.tags is not None else ''
 	use_lower_model = args.use_lower_model
 	use_higher_model = args.use_higher_model
+	improve_trained_model = args.improve_trained_model
 	
 	# LB-Foraging environment args
 	player_level = args.player_level

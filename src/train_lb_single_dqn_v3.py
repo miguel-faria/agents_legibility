@@ -272,6 +272,8 @@ def main():
 	                    help='Flag that signals using curriculum learning using a model with one less food item spawned (when using with only 1 item, defaults to false).')
 	parser.add_argument('--use-higher-model', dest='use_higher_model', action='store_true',
 	                    help='Flag that signals using curriculum learning using a model with one more food item spawned (when using with only all items, defaults to false).')
+	parser.add_argument('--improve-trained-model', dest='improve_trained_model', action='store_true',
+						help='FLag that signals curriculum learning to continue improving previous trained model for the number of food items spawned.')
 	parser.add_argument('--use-general-model', dest='use_general_model', action='store_true',
 	                    help='Flag that signals using curriculum learning using a model as initial weights.')
 	parser.add_argument('--curriculum-path', dest='curriculum_path', type=str, default='', help='Path to the curriculum model to use.')
@@ -324,6 +326,7 @@ def main():
 	use_lower_model = args.use_lower_model
 	use_higher_model = args.use_higher_model
 	use_general_model = args.use_general_model
+	improve_trained_model = args.improve_trained_model
 	
 	# LB-Foraging environment args
 	player_level = args.player_level
@@ -474,6 +477,14 @@ def main():
 			
 			if use_general_model:
 				curriculum_model_path = args.curriculum_path
+			elif improve_trained_model:
+				prev_model_path = model_path.parent.parent.absolute() / ('%d-foods_%d-food-level' % (n_foods_spawn, food_level)) / 'best'
+				if (prev_model_path / ('food_%dx%d_single_model.model' % (loc[0], loc[1]))).exists():
+					logger.info('Improving model trained with %d foods spawned' % n_foods_spawn)
+					curriculum_model_path = str(prev_model_path / ('food_%dx%d_single_model.model' % (loc[0], loc[1])))
+				else:
+					logger.info('Model with one less food item not found, training from scratch')
+					curriculum_model_path = ''
 			elif use_lower_model and n_foods_spawn > 1:
 				prev_model_path = model_path.parent.parent.absolute() / ('%d-foods_%d-food-level' % (max(n_foods_spawn - 1, 1), food_level)) / 'best'
 				if (prev_model_path / 'all_foods_single_model.model').exists():
