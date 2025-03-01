@@ -88,6 +88,8 @@ parser.add_argument('--use-lower-curriculum', dest='use_lower_model', action='st
 					help='Flag that signals the use of curriculum learning with a model with one less food item spawned.')
 parser.add_argument('--use-higher-curriculum', dest='use_higher_model', action='store_true',
 					help='Flag that signals the use of curriculum learning with a model with one more food item spawned.')
+parser.add_argument('--improve-trained-model', dest='improve_trained_model', action='store_true',
+					help='FLag that signals curriculum learning to continue improving previous trained model for the number of hunters and preys spawned.')
 parser.add_argument('--version', dest='version', type=str, required=False, default=TRAIN_VERSION, choices=['v1', 'v2', 'v3'],
                     help='Model of the train script to use:\n\t- version 1: the food configuration changes in cycles that run for N iterations'
 						 '\n\t- version 1: for each food item one model is trained and the food configuration changes every cycle, each cycle is composed by N iterations'
@@ -121,6 +123,7 @@ train_thresh = input_args.train_thresh
 train_version = input_args.version
 use_lower_model = input_args.use_lower_model
 use_higher_model = input_args.use_higher_model
+improve_trained_model = input_args.improve_trained_model
 warmup = input_args.warmup
 
 for i in (reversed(range(limits[0], limits[1] + 1)) if use_higher_model else range(limits[0], limits[1] + 1)):
@@ -139,7 +142,8 @@ for i in (reversed(range(limits[0], limits[1] + 1)) if use_higher_model else ran
 			 (" --models-dir %s" % models_dir if models_dir != '' else "") + (" --data-dir %s" % data_dir if data_dir != '' else "") +
 			 (" --logs-dir %s" % logs_dir if logs_dir != '' else "") + (" --use-lower-model" if use_lower_model else "") + (" --use-higher-model" if use_higher_model else "") +
 			 (" --buffer-smart-add --buffer-method %s" % add_method if smart_add else "") + (" --tracker-dir %s" % tracker_logs if tracker_logs != '' else "") +
-			 (" --train-performance %f" % train_thresh if train_thresh is not None else "") + (' --no-force-coop' if no_force_coop else ''))
+			 (" --train-performance %f" % train_thresh if train_thresh is not None else "") + (' --no-force-coop' if no_force_coop else '') +
+			 (" --improve-trained-model" if improve_trained_model else ''))
 	command = "python " + str(src_dir / ('train_lb_single_dqn%s.py' % ('_' + train_version if train_version != 'v1' else ''))) + args
 	if not USE_SHELL:
 		command = shlex.split(command)

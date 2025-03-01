@@ -94,6 +94,8 @@ parser.add_argument('--use-higher-curriculum', dest='use_higher_model', action='
 					help='Flag that signals the use of curriculum learning with a model with one more food item spawned.')
 parser.add_argument('--use-general-model', dest='use_general_model', action='store_true',
 					help='Flag that signals using curriculum learning using a model as initial weights.')
+parser.add_argument('--improve-trained-model', dest='improve_trained_model', action='store_true',
+					help='FLag that signals curriculum learning to continue improving previous trained model for the number of hunters and preys spawned.')
 parser.add_argument('--curriculum-path', dest='curriculum_path', type=str, default='', help='Path to the curriculum model to use.')
 parser.add_argument('--warmup', dest='warmup', type=int, default=WARMUP_STEPS, help='Number of steps to collect data before starting train')
 
@@ -127,6 +129,7 @@ tracker_logs = input_args.logs
 use_lower_model = input_args.use_lower_model
 use_higher_model = input_args.use_higher_model
 use_general_model = input_args.use_general_model
+improve_trained_model = input_args.improve_trained_model
 curriculum_path = input_args.curriculum_path
 warmup = input_args.warmup
 
@@ -149,7 +152,7 @@ for i in (reversed(range(limits[0], limits[1] + 1)) if use_higher_model else ran
 			 (" --logs-dir %s" % logs_dir if logs_dir != '' else "") + (" --use-lower-model" if use_lower_model else "") + (" --use-higher-model" if use_higher_model else "") +
 			 (" --use-general-model --curriculum-path %s" % curriculum_path if use_general_model else "") +
 	         (" --buffer-smart-add --buffer-method %s" % add_method if smart_add else "") + (" --tracker-dir %s" % tracker_logs if tracker_logs != '' else "") +
-	         (" --train-performance %f" % train_thresh if train_thresh is not None else ""))
+	         (" --train-performance %f" % train_thresh if train_thresh is not None else "") + (" --improve-trained-model" if improve_trained_model else ''))
 
 	command = "python " + str(src_dir / 'train_pursuit_legible_dqn.py') + args
 	if not USE_SHELL:
