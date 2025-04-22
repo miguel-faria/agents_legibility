@@ -3,7 +3,7 @@
 import numpy as np
 import math
 
-from .agent import Agent, ActionDirection, Action
+from .agent import Agent, Action
 
 
 class RandomPrey(Agent):

@@ -1,9 +1,9 @@
 #!/bin/bash
 
 date;hostname;pwd
-options=$(getopt -o n:,m:,s:,j: -l food:,spawn:,field: -- "$@")
-if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] ; then
-  logs_dir="/mnt/scratch-artemis/miguelfaria/logs/lb-foraging"
+options=$(getopt -o n:,m:,s:,j: -l food:,spawn:,field:,prey-type: -- "$@")
+if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" = "maia" ] ; then
+  logs_dir="/mnt/scratch-artemis/miguelfaria/logs/pursuit"
   data_dir="/mnt/data-artemis/miguelfaria/deep_rl/data"
   models_dir="/mnt/data-artemis/miguelfaria/deep_rl/models"
 else
@@ -21,8 +21,9 @@ do
     -m) test_mode=${2}; shift ;;
     -s) start_run=${2}; shift ;;
     -j) tests_job=${2}; shift ;;
-    --foods) max_foods=${2}; shift ;;
-    --spawn) max_spawn_foods=${2}; shift ;;
+    --preys) max_preys=${2}; shift ;;
+    --hunters) n_hunters=${2}; shift ;;
+    --prey-type) prey_type=${2}; shift ;;
     --field) field_len=${2}; shift ;;
     (--) shift; break ;;
     (-*) echo "$0: error - unrecognized option $1" 1>&2; exit 1 ;;
@@ -47,16 +48,20 @@ if [ -z "$tests_job" ]; then
   tests_job=10
 fi
 
-if [ -z "$max_foods" ]; then
-  max_foods=8
+if [ -z "$max_preys" ]; then
+  max_preys=7
 fi
 
-if [ -z "$max_spawn_foods" ]; then
-  max_spawn_foods=6
+if [ -z "$n_hunters" ]; then
+  n_hunters=2
+fi
+
+if [ -z "$prey_type" ]; then
+  prey_type="idle"
 fi
 
 if [ -z "$field_len" ]; then
-  field_len=8
+  field_len=10
 fi
 
 n_tests=$(( max_tests - start_run))
@@ -83,7 +88,7 @@ else
 fi
 
 source "$conda_dir"/bin/activate drl_env
-if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] ; then
+if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" = "maia" ] ; then
   for (( job=1; job<=n_jobs; job++ )); do
     start_test=$(( start_run + (job - 1) * tests_job ))
     end_test=$(( start_test + tests_job ))
@@ -112,7 +117,7 @@ if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] ; then
 #SBATCH --output=job-%x-%j.out
 #SBATCH --partition=a6000
 #SBATCH --dependency=afterok:${job_id}
-python ${script_path}/run_test_lb_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --max-foods ${max_foods} --spawn-foods ${max_spawn_foods} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
+python ${script_path}/legible_agents/scripts/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
 EOF
 
     else
@@ -130,7 +135,7 @@ EOF
 #SBATCH --qos=gpu-short
 #SBATCH --output=job-%x-%j.out
 #SBATCH --partition=a6000
-python ${script_path}/run_test_lb_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --max-foods ${max_foods} --spawn-foods ${max_spawn_foods} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
+python ${script_path}/legible_agents/scripts/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
 EOF
 
     fi
@@ -138,7 +143,7 @@ EOF
     echo "Job ID: "$job_id""
   done
 else
-  python "$script_path"/run_test_lb_legible_collaboration.py --tests "$max_tests" --mode "$test_mode"
+  python "$script_path"/legible_agents/scripts/run_test_pursuit_legible_collaboration.py --tests "$max_tests" --mode "$test_mode"
 fi
 
 conda deactivate

@@ -683,7 +683,7 @@ class TargetPursuitEnv(PursuitEnv):
 		free_layer = np.ones(layer_size)
 		free_layer[:self._hunter_sight, :] = 0
 		free_layer[-self._hunter_sight:, :] = 0
-		free_layer[:, self._hunter_sight] = 0
+		free_layer[:, :self._hunter_sight] = 0
 		free_layer[:, -self._hunter_sight:] = 0
 		
 		target_layer = np.zeros(layer_size)
@@ -916,6 +916,8 @@ class TargetPursuitEnv(PursuitEnv):
 				self._rendering_initialized = True
 			except Exception as e:
 				print('Caught exception %s when trying to import Viewer class.' % str(e.args))
+		else:
+			self._render.highlight = self.target
 
 		return self._render.render(self, return_rgb_array=(self.render_mode == 'rgb_array'))
 	

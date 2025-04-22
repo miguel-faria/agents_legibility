@@ -37,9 +37,9 @@ fi
 
 source "$conda_dir"/bin/activate drl_env
 if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] ; then
-  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests 250 --mode 2 --hunters 2 --preys 4 --prey-type idle --logs-dir /mnt/scratch-artemis/miguelfaria/logs/lb-foraging --models-dir /mnt/data-artemis/miguelfaria/deep_rl/models --data-dir /mnt/data-artemis/miguelfaria/deep_rl/data
+  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests 250 --mode 2 --hunters 2 --preys 7 --prey-type random --logs-dir /mnt/scratch-artemis/miguelfaria/logs/lb-foraging --models-dir /mnt/data-artemis/miguelfaria/deep_rl/models --data-dir /mnt/data-artemis/miguelfaria/deep_rl/data
 else
-  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests 10 --mode 0 --hunters 2 --preys 4 --prey-type idle
+  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests 10 --mode 2 --hunters 2 --preys 6 --prey-type random --render
 fi
 
 conda deactivate
