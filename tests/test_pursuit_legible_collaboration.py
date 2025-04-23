@@ -437,6 +437,7 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 						tom_agents[idx].sample_models = leg_models
 				
 				# Get next objective
+				preys_left = env.prey_alive_ids.copy()
 				task = preys_left.pop(rng_gen.integers(n_preys_alive))
 				env.target = task
 		
