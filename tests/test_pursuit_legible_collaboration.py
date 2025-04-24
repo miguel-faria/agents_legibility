@@ -474,8 +474,8 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 					   *[tom_agents[idx].action(tom_obs[idx], last_leader_sample, CONF, logger, 'p%d' % n_preys_alive) for idx in range(n_tom_hunters)])
 		
 		actions = coordinate_agents(env, [tom_agents[idx].predict_task for idx in range(n_tom_hunters)], actions, n_tom_hunters)
-		for prey_id in env.prey_alive_ids:
-			actions += (prey_agents[prey_id].act(env), )
+		for prey_id in env.prey_ids:
+			actions += (prey_agents[prey_id].act(env) if prey_id in env.prey_alive_ids else Action.STAY.value, )
 		
 		recent_states.append(current_state)
 		if len(recent_states) > 3:
@@ -542,6 +542,7 @@ def eval_legibility(n_runs: int, test_mode: int, logger: logging.Logger, opt_mod
 				                    'test_mode-%d_field_%d-%d_hunters-%d_%s-prey' % (test_mode, field_dims[0], field_dims[1], len(hunters), prey_type), results, logger, run)
 
 			logger.info('Run %d results: ' % run + str(results))
+
 
 def main():
 	

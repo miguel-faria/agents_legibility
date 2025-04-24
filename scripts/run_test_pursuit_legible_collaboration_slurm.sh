@@ -117,7 +117,7 @@ if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" 
 #SBATCH --output=job-%x-%j.out
 #SBATCH --partition=a6000
 #SBATCH --dependency=afterok:${job_id}
-python ${script_path}/legible_agents/scripts/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
+python ${script_path}/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
 EOF
 
     else
@@ -135,7 +135,7 @@ EOF
 #SBATCH --qos=gpu-short
 #SBATCH --output=job-%x-%j.out
 #SBATCH --partition=a6000
-python ${script_path}/legible_agents/scripts/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
+python ${script_path}/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
 EOF
 
     fi
@@ -143,7 +143,7 @@ EOF
     echo "Job ID: "$job_id""
   done
 else
-  python "$script_path"/legible_agents/scripts/run_test_pursuit_legible_collaboration.py --tests "$max_tests" --mode "$test_mode"
+  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests "$max_tests" --mode "$test_mode" --preys "$max_preys" --hunters "$n_hunters" --prey-type "$prey_type"
 fi
 
 conda deactivate
