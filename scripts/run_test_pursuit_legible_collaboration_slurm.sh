@@ -100,13 +100,13 @@ if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" 
     echo "Launching job "$job" out of "$n_jobs", starting at "$start_test" and ending at "$end_test""
 
     # Generate the sbatch script for this job
-    sbatch_script=""$script_path"/sbatch_job_"$test_mode"_"$job"_"$start_test"-"$end_test".sh"
+    sbatch_script=""$script_path"/sbatch_job_"$prey_type"_"$field_len"_"$test_mode"_"$job"_"$start_test"-"$end_test".sh"
     if [ $job -gt 1 ] ; then
       cat > "$sbatch_script" <<EOF
 #!/bin/bash
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=miguel.faria@tecnico.ulisboa.pt
-#SBATCH --job-name=test_pursuit_legible_collaboration_${test_mode}_${job}_${start_test}_${end_test}
+#SBATCH --job-name=test_pursuit_legible_collaboration_${prey_type}_${field_len}_${test_mode}_${job}_${start_test}_${end_test}
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --tasks-per-node=1
@@ -125,7 +125,7 @@ EOF
 #!/bin/bash
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=miguel.faria@tecnico.ulisboa.pt
-#SBATCH --job-name=test_pursuit_legible_collaboration_${test_mode}_${job}_${start_test}_${end_test}
+#SBATCH --job-name=test_pursuit_legible_collaboration_${prey_type}_${field_len}_${test_mode}_${job}_${start_test}_${end_test}
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --tasks-per-node=1
