@@ -100,13 +100,13 @@ if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" 
     echo "Launching job "$job" out of "$n_jobs", starting at "$start_test" and ending at "$end_test""
 
     # Generate the sbatch script for this job
-    sbatch_script=""$script_path"/sbatch_job_"$test_mode"_"$job"_"$start_test"-"$end_test".sh"
+    sbatch_script=""$script_path"/sbatch_job_"$prey_type"_"$field_len"_"$test_mode"_"$job"_"$start_test"-"$end_test".sh"
     if [ $job -gt 1 ] ; then
       cat > "$sbatch_script" <<EOF
 #!/bin/bash
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=miguel.faria@tecnico.ulisboa.pt
-#SBATCH --job-name=test_pursuit_legible_collaboration_${test_mode}_${job}_${start_test}_${end_test}
+#SBATCH --job-name=test_pursuit_legible_collaboration_${prey_type}_${field_len}_${test_mode}_${job}_${start_test}_${end_test}
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --tasks-per-node=1
@@ -117,7 +117,9 @@ if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" 
 #SBATCH --output=job-%x-%j.out
 # #SBATCH --partition=a6000
 #SBATCH --dependency=afterok:${job_id}
+source $conda_dir/bin/activate drl_env
 python ${script_path}/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
+conda deactivate
 EOF
 
     else
@@ -125,7 +127,7 @@ EOF
 #!/bin/bash
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=miguel.faria@tecnico.ulisboa.pt
-#SBATCH --job-name=test_pursuit_legible_collaboration_${test_mode}_${job}_${start_test}_${end_test}
+#SBATCH --job-name=test_pursuit_legible_collaboration_${prey_type}_${field_len}_${test_mode}_${job}_${start_test}_${end_test}
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --tasks-per-node=1
@@ -134,8 +136,10 @@ EOF
 #SBATCH --mem=8G
 #SBATCH --qos=gpu-short
 #SBATCH --output=job-%x-%j.out
-# #SBATCH --partition=a6000
+#SBATCH --partition=a6000
+source $conda_dir/bin/activate drl_env
 python ${script_path}/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
+conda deactivate
 EOF
 
     fi
@@ -143,7 +147,7 @@ EOF
     echo "Job ID: "$job_id""
   done
 else
-  python "$script_path"/legible_agents/scripts/run_test_pursuit_legible_collaboration.py --tests "$max_tests" --mode "$test_mode"
+  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests "$max_tests" --mode "$test_mode" --preys "$max_preys" --hunters "$n_hunters" --prey-type "$prey_type"
 fi
 
 conda deactivate

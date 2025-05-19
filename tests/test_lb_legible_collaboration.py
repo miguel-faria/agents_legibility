@@ -173,9 +173,6 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 	leader_agent.init_interaction(tasks)
 	tom_agent.init_interaction(tasks)
 	
-	# print(leader_agent.tasks, tom_agent.tasks)
-	# print(task, tom_agent.predict_task)
-	
 	# Setup environment for test
 	env.food_spawn_pos = spawned_foods
 	env.n_food_spawn = max_foods_spawn

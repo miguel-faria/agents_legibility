@@ -5,7 +5,7 @@ import jax
 
 from dl_algos.dqn import DQNetwork
 from agents.agent import Agent
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from logging import Logger
 
 
@@ -81,8 +81,8 @@ class TomAgent(Agent):
 		goals_likelihood = jnp.array(goals_likelihood)
 		return goals_likelihood
 	
-	def task_inference(self, logger: Logger) -> str:
-		if not self._tasks:
+	def task_inference(self, logger: Optional[Logger]) -> str:
+		if logger is not None and not self._tasks:
 			logger.info('[ERROR]: List of possible tasks not defined!!')
 			return ''
 		
@@ -100,9 +100,9 @@ class TomAgent(Agent):
 		self._rng_key, subkey = jax.random.split(self._rng_key)
 		return self._tasks[jax.random.choice(subkey, high_likelihood)]
 	
-	def bayesian_task_inference(self, sample: Tuple[jnp.ndarray, int], conf: float, logger: Logger) -> Tuple[str, float]:
+	def bayesian_task_inference(self, sample: Tuple[jnp.ndarray, int], conf: float, logger: Optional[Logger]) -> Tuple[str, float]:
 		
-		if not self._tasks:
+		if logger is not None and not self._tasks:
 			logger.info('[ERROR]: List of possible tasks not defined!!')
 			return '', -1
 		
@@ -125,13 +125,13 @@ class TomAgent(Agent):
 		
 		return task_id, task_conf
 	
-	def action(self, obs: jnp.ndarray, sample: Tuple[jnp.ndarray, int], conf: float, logger: Logger, task: str = '') -> int:
+	def action(self, obs: jnp.ndarray, sample: Tuple[jnp.ndarray, int], conf: float, logger: Optional[Logger], task: str = '') -> int:
 		if task == '':
 			predict_task, predict_conf = self.bayesian_task_inference(sample, conf, logger)
 			self._predict_task = predict_task
 		return super().action(obs, sample, conf, logger, self._predict_task)
 	
-	def sub_acting(self, obs: jnp.ndarray, logger: Logger, act_try: int, sample: Tuple[jnp.ndarray, int], conf: float, task: str = '') -> int:
+	def sub_acting(self, obs: jnp.ndarray, logger: Optional[Logger], act_try: int, sample: Tuple[jnp.ndarray, int], conf: float, task: str = '') -> int:
 		if task == '':
 			predict_task, predict_conf = self.bayesian_task_inference(sample, conf, logger)
 			self._predict_task = predict_task
