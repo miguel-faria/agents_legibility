@@ -259,9 +259,11 @@ def load_models(logger: logging.Logger, opt_models_dir: Path, leg_models_dir: Pa
 	leg_model_names = [fname.name for fname in (leg_models_dir / ('%d-hunters' % n_hunters) / ('%s-prey' % prey_type) / 'best').iterdir()]
 	try:
 		# Find the optimal model name for the food location
+		logger.info('Loading optimal model')
 		model_name = ''
 		for name in opt_model_names:
 			if name.find("%d" % n_preys_alive) != -1:
+				logger.info('Found model for %d preys alive: %s' % (n_preys_alive, name))
 				model_name = name
 				break
 		assert model_name != ''
@@ -270,9 +272,11 @@ def load_models(logger: logging.Logger, opt_models_dir: Path, leg_models_dir: Pa
 		optim_models['p%d' % n_preys_alive] = opt_dqn
 		
 		# Find the legible model name for the food location
+		logger.info('Loading legible model')
 		model_name = ''
 		for name in leg_model_names:
 			if name.find("%d" % n_preys_alive) != -1:
+				logger.info('Found model for %d preys alive: %s' % (n_preys_alive, name))
 				model_name = name
 				break
 		assert model_name != ''
@@ -672,6 +676,7 @@ def main():
 	file_handler.setLevel(logging.INFO)
 	logger.addHandler(file_handler)
 	
+	logger.info('Starting pursuit testing')
 	eval_legibility(n_runs, mode, logger, opt_models_dir, leg_models_dir, field_size, hunters, preys, sight, prey_ids, prey_type, require_catch, catch_reward,
 	                steps_episode, gamma, n_layers, relu, layer_sizes, use_cnn, use_dueling_dqn, use_ddqn, data_dir, cnn_properties, use_paralell, use_render, start_run)
 	
