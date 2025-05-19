@@ -117,7 +117,9 @@ if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" 
 #SBATCH --output=job-%x-%j.out
 #SBATCH --partition=a6000
 #SBATCH --dependency=afterok:${job_id}
+source $conda_dir/bin/activate drl_env
 python ${script_path}/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
+conda deactivate
 EOF
 
     else
@@ -135,7 +137,9 @@ EOF
 #SBATCH --qos=gpu-short
 #SBATCH --output=job-%x-%j.out
 #SBATCH --partition=a6000
+source $conda_dir/bin/activate drl_env
 python ${script_path}/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
+conda deactivate
 EOF
 
     fi

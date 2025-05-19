@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import jax
 
 from dl_algos.dqn import DQNetwork
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from logging import Logger
 
 
@@ -70,12 +70,12 @@ class Agent(object):
 		self._rng_key, subkey = jax.random.split(self._rng_key)
 		return int(jax.random.choice(subkey, len(q), p=pol))
 	
-	def action(self, obs: jnp.ndarray, sample: Tuple[jnp.ndarray, int], conf: float, logger: Logger, task: str = '') -> int:
+	def action(self, obs: jnp.ndarray, sample: Tuple[jnp.ndarray, int], conf: float, logger: Optional[Logger], task: str = '') -> int:
 		action = self.get_actions(task, obs)
 		# print(self._agent_id, task, action)
 		return action
 	
-	def sub_acting(self, obs: jnp.ndarray, logger: Logger, act_try: int, sample: Tuple[jnp.ndarray, int], conf: float, task: str = '') -> int:
+	def sub_acting(self, obs: jnp.ndarray, logger: Optional[Logger], act_try: int, sample: Tuple[jnp.ndarray, int], conf: float, task: str = '') -> int:
 		q_vals = jax.device_get(self._goal_models[task].q_network.apply(self._goal_models[task].online_state.params, obs)[0])
 		sorted_q = jnp.copy(q_vals)
 		sorted_q.sort()
