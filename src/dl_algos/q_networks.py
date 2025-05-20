@@ -4,6 +4,7 @@ import flax.linen as nn
 import jax.numpy as jnp
 from typing import Callable, List, Tuple
 
+
 class QNetwork(nn.Module):
 	action_dim: int
 	num_layers: int

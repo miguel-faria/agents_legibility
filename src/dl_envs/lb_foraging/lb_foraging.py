@@ -392,7 +392,7 @@ class LBForagingEnv(Env):
 		players = []
 		for p in obs.players:
 			player = Player()
-			player.setup(p.position, p.level, obs.field.shape, p.player_id)
+			player.setup(p.position, p.level, obs.field.shape, p.objective_id)
 			player.score = p.score if p.score else 0
 			players.append(player)
 

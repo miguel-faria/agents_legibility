@@ -164,7 +164,7 @@ class Viewer(object):
             p.update(scale_y=h_grid_size / p.height, scale_x=w_grid_size / p.width)
         batch.draw()
         for p in env.players:
-            self._draw_badge(*p.position, p.level, p.player_id)
+            self._draw_badge(*p.position, p.level, p.objective_id)
 
     def _draw_badge(self, row, col, level, badge_id):
         resolution = 6
