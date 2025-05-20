@@ -101,7 +101,24 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 				# interact with environment
 				explore = rng_gen.random() < eps
 				if explore:
-					actions = np.array(list(env.action_space.sample()[:env.n_hunters]) + [env.agents[prey_id].act(env) for prey_id in env.prey_alive_ids])
+					leg_actions = list(env.action_space.sample()[:dqn_model.n_leg_agents])
+					prey_actions = [env.agents[prey_id].act(env) for prey_id in env.prey_alive_ids]
+					optimal_actions = []
+					for a_idx in range(dqn_model.n_leg_agents, env.n_hunters):
+						if dqn_model.agent_dqn.cnn_layer:
+							cnn_obs = obs[a_idx].reshape((1, *cnn_shape))
+							q_values = dqn_model.agent_dqn.q_network.apply(dqn_model.optimal_models[dqn_target_key].params, cnn_obs)[0]
+						else:
+							q_values = dqn_model.agent_dqn.q_network.apply(dqn_model.optimal_models[dqn_target_key].params, obs[a_idx])
+
+						if greedy_action:
+							action = q_values.argmax(axis=-1)
+						else:
+							pol = np.isclose(q_values, q_values.max(), rtol=1e-10, atol=1e-10).astype(int)
+							pol = pol / pol.sum()
+							action = rng_gen.choice(range(env.action_space[0].n), p=pol)
+						optimal_actions.append(action)
+					actions = np.array(leg_actions + optimal_actions + prey_actions)
 				else:
 					actions = []
 					for a_idx in range(env.n_hunters):
