@@ -59,10 +59,10 @@ def main():
 		
 		print('Iteration: %d\tStep: %d' % (it + 1, i + 1))
 		actions = []
-		for hunter_id in hunter_ids:
+		for agent_id in hunter_ids:
 			valid_action = False
 			while not valid_action:
-				human_input = input("Action for agent %s:\t" % hunter_id)
+				human_input = input("Action for agent %s:\t" % agent_id)
 				action = int(KEY_MAP[human_input])
 				if action < 6:
 					valid_action = True

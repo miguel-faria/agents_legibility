@@ -11,7 +11,7 @@
 #SBATCH --mem=4G
 #SBATCH --qos=gpu-medium
 #SBATCH --output="job-%x-%j.out"
-#SBATCH --partition=a6000
+# #SBATCH --partition=a6000
 date;hostname;pwd
 
 if [ -n "${SLURM_JOB_ID:-}" ] ; then
@@ -36,10 +36,10 @@ else
 fi
 
 source "$conda_dir"/bin/activate drl_env
-if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] ; then
-  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests 250 --mode 2 --hunters 2 --preys 4 --prey-type idle --logs-dir /mnt/scratch-artemis/miguelfaria/logs/lb-foraging --models-dir /mnt/data-artemis/miguelfaria/deep_rl/models --data-dir /mnt/data-artemis/miguelfaria/deep_rl/data
+if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" = "maia" ] ; then
+  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests 10 --mode 2 --hunters 2 --preys 7 --prey-type random --logs-dir /mnt/scratch-artemis/miguelfaria/logs/lb-foraging --models-dir /mnt/data-artemis/miguelfaria/deep_rl/models --data-dir /mnt/data-artemis/miguelfaria/deep_rl/data
 else
-  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests 10 --mode 0 --hunters 2 --preys 4 --prey-type idle
+  python "$script_path"/run_test_pursuit_legible_collaboration.py --tests 100 --mode 2 --hunters 2 --preys 7 --prey-type random --field-len 10 --models-dir /mnt/d/Research/models/legibility
 fi
 
 conda deactivate

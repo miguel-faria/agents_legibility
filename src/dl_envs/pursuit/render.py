@@ -189,27 +189,8 @@ class Viewer(object):
         radius_x = w_grid_size / 6
         radius_y = h_grid_size / 6
 
-        lvl_badge_x = col * w_grid_size + (3 / 4) * w_grid_size
-        lvl_badge_y = self.window.height - h_grid_size * (row + 1) + (1 / 4) * h_grid_size
         id_badge_x = col * w_grid_size + (1 / 4) * w_grid_size
         id_badge_y = self.window.height - h_grid_size * (row + 1) + (3 / 4) * h_grid_size
-        
-
-        # make a circle for each badge
-        # verts = []
-        # for i in range(resolution):
-        #     angle = 2 * math.pi * i / resolution
-        #     x = radius_x * math.cos(angle) + lvl_badge_x
-        #     y = radius_y * math.sin(angle) + lvl_badge_y
-        #     verts += [x, y]
-        # circle = pyglet.graphics.vertex_list(resolution, ("v2f", verts))
-        # glColor3ub(*_BLACK)
-        # circle.draw(GL_POLYGON)
-        # glColor3ub(*_WHITE)
-        # circle.draw(GL_LINE_LOOP)
-        # lvl_label = pyglet.text.Label(str(level), font_name="Times New Roman", font_size=12, x=lvl_badge_x, y=lvl_badge_y + 2,
-        #                               anchor_x="center", anchor_y="center")
-        # lvl_label.draw()
         
         verts = []
         for i in range(resolution):

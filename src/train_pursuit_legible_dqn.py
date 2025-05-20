@@ -26,7 +26,7 @@ from wandb.wandb_run import Run
 
 RNG_SEED = 6102023
 TEST_RNG_SEED = 4072023
-N_TESTS = 100
+N_TESTS = 250
 PREY_TYPES = {'idle': 0, 'greedy': 1, 'random': 2}
 MIN_TRAIN_PERFORMANCE = 0.9
 
@@ -369,7 +369,6 @@ def main():
 	target_freq = args.target_freq
 	learn_rate = args.learn_rate
 	target_update_rate = args.target_learn_rate
-	initial_eps = args.initial_eps
 	final_eps = args.final_eps
 	eps_decay = args.eps_decay
 	eps_type = args.eps_type
@@ -553,24 +552,29 @@ def main():
 
 			if use_general_model:
 				curriculum_model_path = args.curriculum_path
+				initial_eps = args.initial_eps
 			elif improve_trained_model:
 				prev_model_path = model_path.parent.absolute() / 'best'
 				logger.info('Model pahth: ' + str(prev_model_path))
 				if (prev_model_path / ('%d-preys_single_model.model' % n_preys)).exists():
 					logger.info('Improving model trained with %d preys spawned' % n_preys)
 					curriculum_model_path = str(prev_model_path / ('%d-preys_single_model.model' % n_preys))
+					initial_eps = args.initial_eps
 				else:
 					logger.info('Model with one less prey not found, training from scratch')
 					curriculum_model_path = ''
+					initial_eps = 1.0
 			elif use_lower_model and n_preys > 1:
 				prev_model_path = model_path.parent.absolute() / 'best'
 				logger.info('Model pahth: ' + str(prev_model_path))
 				if (prev_model_path / ('%d-preys_single_model.model' % max(n_preys - 1, 1))).exists():
 					logger.info('Using model trained with %d foods spawned as a baseline' % max(n_preys - 1, 1))
 					curriculum_model_path = str(prev_model_path / ('%d-preys_single_model.model' % max(n_preys - 1, 1)))
+					initial_eps = args.initial_eps
 				else:
 					logger.info('Model with one less prey not found, training from scratch')
 					curriculum_model_path = ''
+					initial_eps = 1.0
 			elif use_higher_model and n_preys < n_preys:
 				next_model_path = model_path.parent.absolute() / 'best'
 				if (next_model_path / ('%d-preys_single_model.model' % min(n_preys + 1, n_preys))).exists():
@@ -579,9 +583,11 @@ def main():
 				else:
 					logger.info('Model with one more prey not found, training from scratch')
 					curriculum_model_path = ''
+				initial_eps = args.initial_eps
 			else:
 				logger.info('Training model from scratch')
 				curriculum_model_path = ''
+				initial_eps = 1.0
 
 			random.seed(RNG_SEED)
 			logger.info('Starting training')

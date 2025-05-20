@@ -67,7 +67,7 @@ class PursuitEnv(Env):
 	
 	def __init__(self, hunters: List[Tuple[str, int]], preys: List[Tuple[str, int]], field_size: Tuple[int, int], hunter_sight: int, n_catch: int = 4,
 				 max_steps: int = 250, use_encoding: bool = False, dead_preys: List[bool] = None, use_layer_obs: bool = False, agent_centered: bool = False,
-				 catch_reward: float = 1.0, render_mode: List[str] = None, freeze_pos: bool = False):
+				 catch_reward: float = 1.0, render_mode: List[str] = None, freeze_pos: bool = False, rng_seed: int = 23548697):
 		
 		self._prey_ids = [prey[0] for prey in preys]
 		self._hunter_ids = [hunter[0] for hunter in hunters]
@@ -88,20 +88,22 @@ class PursuitEnv(Env):
 		
 		self._agents = {}
 		rank = 1
-		for h_id, h_type in hunters:
+		for idx in range(self._n_hunters):
+			h_id, h_type = hunters[idx]
 			if h_type == 0:
-				self._agents[h_id] = Agent(h_id, AgentType.HUNTER, rank)
+				self._agents[h_id] = Agent(h_id, AgentType.HUNTER, rank, rng_seed + idx)
 			else:
 				self._agents[h_id] = TargetAgent(h_id, AgentType.HUNTER, rank)
 		
 		rank = 0
-		for p_id, p_type in preys:
+		for idx in range(self._n_preys):
+			p_id, p_type = preys[idx]
 			if p_type == 1:
-				self._agents[p_id] = GreedyPrey(p_id, AgentType.PREY, rank)
+				self._agents[p_id] = GreedyPrey(p_id, AgentType.PREY, rank, rng_seed + idx)
 			elif p_type == 2:
-				self._agents[p_id] = RandomPrey(p_id, AgentType.PREY, rank)
+				self._agents[p_id] = RandomPrey(p_id, AgentType.PREY, rank, rng_seed + idx)
 			else:
-				self._agents[p_id] = Agent(p_id, AgentType.PREY, rank)
+				self._agents[p_id] = Agent(p_id, AgentType.PREY, rank, rng_seed + idx)
 		
 		n_actions = len(Action)
 		self.action_space = MultiDiscrete([n_actions] * (self._n_hunters + self._n_preys))
@@ -296,7 +298,7 @@ class PursuitEnv(Env):
 		while not all_unique:
 			all_unique = True
 			for a_pos in list(next_positions.keys()):
-				a_ids = next_positions[a_pos]
+				a_ids = next_positions[a_pos].copy()
 				if len(a_ids) > 1:
 					all_unique = False
 					for a_id in a_ids:
@@ -683,7 +685,7 @@ class TargetPursuitEnv(PursuitEnv):
 		free_layer = np.ones(layer_size)
 		free_layer[:self._hunter_sight, :] = 0
 		free_layer[-self._hunter_sight:, :] = 0
-		free_layer[:, self._hunter_sight] = 0
+		free_layer[:, :self._hunter_sight] = 0
 		free_layer[:, -self._hunter_sight:] = 0
 		
 		target_layer = np.zeros(layer_size)
@@ -730,7 +732,6 @@ class TargetPursuitEnv(PursuitEnv):
 				free_layer[agent.pos[0] + self._hunter_sight, agent.pos[1] + self._hunter_sight] = 0
 		
 		hunter_obs = np.stack([hunter_layer, prey_layer, free_layer, target_layer])
-		# prey_obs = np.stack([prey_layer, hunter_layer, free_layer])
 		padding = 2 * self._hunter_sight + 1
 		
 		return np.array([hunter_obs[:, self._agents[hunter_id].pos[0]:self._agents[hunter_id].pos[0] + padding,
@@ -872,7 +873,7 @@ class TargetPursuitEnv(PursuitEnv):
 				if h_id not in capturing_hunters:
 					hunters_capturing.append(h_id)
 			is_surrounded = len(hunters_capturing) >= self._n_need_catch
-			if is_surrounded:
+			if is_surrounded and prey_id == self._target_id:
 				captured_prey += [prey_id]
 				self._agents[prey_id].alive = False
 				self._prey_alive_ids.remove(prey_id)
@@ -916,6 +917,8 @@ class TargetPursuitEnv(PursuitEnv):
 				self._rendering_initialized = True
 			except Exception as e:
 				print('Caught exception %s when trying to import Viewer class.' % str(e.args))
+		else:
+			self._render.highlight = self.target
 
 		return self._render.render(self, return_rgb_array=(self.render_mode == 'rgb_array'))
 	

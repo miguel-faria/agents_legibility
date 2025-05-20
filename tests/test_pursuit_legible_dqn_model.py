@@ -13,6 +13,9 @@ from itertools import product
 from pathlib import Path
 from gymnasium.spaces import MultiBinary, MultiDiscrete
 from typing import List
+from dl_envs.pursuit.agents.random_prey import RandomPrey
+from dl_envs.pursuit.agents.greedy_prey import GreedyPrey
+from dl_envs.pursuit.agents.agent import Agent as PreyAgent
 
 
 RNG_SEED = 4072023
@@ -41,15 +44,15 @@ def main():
 	use_ddqn = True
 	use_cnn = True
 	use_render = True
-	n_hunters = 3
+	n_hunters = 2
 	n_legible_agents = 1
-	n_preys = 4
-	n_spawn_preys = 4
+	n_preys = 7
+	n_spawn_preys = 7
 	hunter_ids = ['h%d' % i for i in range(1, n_hunters + 1)]
 	field_size = (10, 10)
 	sight = field_size[0]
 	prey_ids = ['p%d' % i for i in range(1, n_preys + 1)]
-	prey_type = 'idle'
+	prey_type = 'random'
 	n_catch = 2
 	catch_reward = 5
 	max_steps = 50
@@ -64,9 +67,7 @@ def main():
 	os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 	
 	data_dir = Path(__file__).parent.absolute().parent.absolute() / 'data'
-	log_dir = Path(__file__).parent.absolute().parent.absolute() / 'logs'
-	models_dir = Path(__file__).parent.absolute().parent.absolute() / 'models'
-	log_filename = ('test_pursuit_dqn_%dx%d-field_%d-hunters_%d-catch' % (field_size[0], field_size[1], n_hunters, n_catch)) + '_best'
+	models_dir = Path('/mnt/d/Research/models/legibility')
 	optimal_model_path = (models_dir / 'pursuit_single_vdn_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-hunters' % n_hunters)) / ('%s-prey' % prey_type) / 'best'
 	legible_model_path = (models_dir / 'pursuit_legible_vdn_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-hunters' % n_hunters)) / ('%s-prey' % prey_type) / 'best'
 	
@@ -81,9 +82,9 @@ def main():
 			pool_window = [tuple(elem) for elem in arch_data[architecture]['pool_window']]
 			cnn_properties = [n_conv_layers, cnn_size, cnn_kernel, pool_window]
 	
-	print('#############################')
-	print('Starting LB Foraging DQN Test')
-	print('#############################')
+	print('#########################')
+	print('Starting Pursuit DQN Test')
+	print('#########################')
 	print('Environment setup')
 	rng_gen = np.random.default_rng(TEST_RNG_SEED)
 	env = TargetPursuitEnv(hunters, preys, field_size, sight, prey_ids[rng_gen.integers(n_preys)], n_catch, max_steps, use_layer_obs=True, agent_centered=True, catch_reward=catch_reward)
@@ -99,6 +100,15 @@ def main():
 	obs_shape = (0,) if not use_cnn else (*obs_space.shape[1:], obs_space.shape[0])
 	legible_dqn_model.load_model(('%d-preys_single_model.model' % n_spawn_preys), legible_model_path, None, obs_shape, False)
 	optim_dqn_model.load_model(('%d-preys_single_model.model' % n_spawn_preys), optimal_model_path, None, obs_shape, False)
+	
+	prey_agents = {}
+	for i, prey_id in enumerate(prey_ids):
+		if prey_type == 'random':
+			prey_agents[prey_id] = RandomPrey(prey_id, 2, 0, TEST_RNG_SEED + i)
+		elif prey_type == 'greedy':
+			prey_agents[prey_id] = GreedyPrey(prey_id, 2, 0, TEST_RNG_SEED + i)
+		else:
+			prey_agents[prey_id] = PreyAgent(prey_id, 2, 0, TEST_RNG_SEED + i)
 	
 	print('Testing trained model')
 	np.random.seed(TEST_RNG_SEED)
@@ -127,6 +137,8 @@ def main():
 					else:
 						q_values = legible_dqn_model.q_network.apply(online_params, obs[a_idx])
 					
+					print('legible', a_idx, env.hunter_ids[a_idx], q_values)
+					
 				else:
 					online_params = optim_dqn_model.online_state.params
 				
@@ -135,15 +147,15 @@ def main():
 						q_values = optim_dqn_model.q_network.apply(online_params, cnn_obs)[0]
 					else:
 						q_values = optim_dqn_model.q_network.apply(online_params, obs[a_idx])
+					
+					print('optimal', a_idx, env.hunter_ids[a_idx], q_values)
 				
-				pol = np.isclose(q_values, q_values.max(), rtol=1e-10, atol=1e-10).astype(int)
-				pol = pol / pol.sum()
-				action = rng_gen.choice(range(env.action_space[0].n), p=pol)
-				# action = jax.device_get(action)
+				action = q_values.argmax(axis=-1)
+				action = jax.device_get(action)
 				actions += [action]
 				
 			for prey_id in env.prey_alive_ids:
-				actions += [env.agents[prey_id].act(env)]
+				actions += [prey_agents[prey_id].act(env)]
 			
 			actions = np.array(actions)
 			print('Actions: ', ' '.join([str(Action(action).name) for action in actions]))
@@ -151,9 +163,9 @@ def main():
 			print(env.get_env_log())
 			obs = next_obs
 			epoch += 1
+			input()
 			if use_render:
 				env.render()
-			input()
 			
 			if finished or timeout:
 				game_over = True

@@ -8,6 +8,7 @@ import logging
 import os
 import multiprocessing as mp
 import csv
+import jax.numpy as jnp
 
 from pathlib import Path
 from datetime import datetime
@@ -15,24 +16,19 @@ from typing import List, Tuple, Dict, Callable
 from gymnasium.spaces import MultiBinary
 from agents.agent import Agent
 from dl_envs.pursuit.pursuit_env import TargetPursuitEnv, Action, ActionDirection
+from dl_envs.pursuit.agents.random_prey import RandomPrey
+from dl_envs.pursuit.agents.greedy_prey import GreedyPrey
+from dl_envs.pursuit.agents.agent import Agent as PreyAgent
 from dl_algos.dqn import DQNetwork
 from flax.linen import relu
+from logging import Logger
+
 
 LEADER_ID = 0
 TOM_ID = 1
 RNG_SEED = 20240729
 CONF = 1.0
 PREY_TYPES = {'idle': 0, 'greedy': 1, 'random': 2}
-
-# ! /usr/bin/env python
-
-import jax.numpy as jnp
-import jax
-
-from dl_algos.dqn import DQNetwork
-from agents.agent import Agent
-from typing import Dict, List, Tuple
-from logging import Logger
 
 
 class TomAgent(Agent):
@@ -85,16 +81,20 @@ class TomAgent(Agent):
 	def init_interaction(self, interaction_tasks: List[str]):
 		self._tasks = interaction_tasks.copy()
 		self._n_tasks = len(interaction_tasks)
-		self._goal_prob = jnp.ones(self._n_tasks) / self._n_tasks
-		self._interaction_likelihoods = jnp.ones(self._n_tasks)
+		# self._goal_prob = jnp.ones(self._n_tasks) / self._n_tasks
+		# self._interaction_likelihoods = jnp.ones(self._n_tasks)
+		self._goal_prob = jnp.log(jnp.ones(self._n_tasks) / self._n_tasks)
+		self._interaction_likelihoods = jnp.zeros(self._n_tasks)
 		self._predict_task = interaction_tasks[0]
 	
 	def reset_inference(self, tasks: List = None):
 		if tasks:
 			self._tasks = tasks.copy()
 			self._n_tasks = len(self._tasks)
-		self._interaction_likelihoods = jnp.ones(self._n_tasks)
-		self._goal_prob = jnp.ones(self._n_tasks) / self._n_tasks
+		# self._goal_prob = jnp.ones(self._n_tasks) / self._n_tasks
+		# self._interaction_likelihoods = jnp.ones(self._n_tasks)
+		self._goal_prob = jnp.log(jnp.ones(self._n_tasks) / self._n_tasks)
+		self._interaction_likelihoods = jnp.zeros(self._n_tasks)
 		self._predict_task = self._tasks[0]
 	
 	def sample_probability(self, obs: jnp.ndarray, a: int, conf: float) -> jnp.ndarray:
@@ -113,16 +113,19 @@ class TomAgent(Agent):
 			logger.info('[ERROR]: List of possible tasks not defined!!')
 			return ''
 		
-		if len(self._interaction_likelihoods) > 0:
-			likelihood = jnp.cumprod(jnp.array(self._interaction_likelihoods), axis=0)[-1]
-		else:
-			likelihood = jnp.zeros(self._n_tasks)
-		goals_prob = self._goal_prob * likelihood
+		# if len(self._interaction_likelihoods) > 0:
+		# 	likelihood = jnp.cumprod(jnp.array(self._interaction_likelihoods), axis=0)[-1]
+		# else:
+		# 	likelihood = jnp.zeros(self._n_tasks)
+		# goals_prob = self._goal_prob * likelihoods
+		likelihoods = jnp.cumsum(self._interaction_likelihoods, axis=0)[-1]
+		goals_prob = likelihoods + self._goal_prob
 		goals_prob_sum = goals_prob.sum()
 		if goals_prob_sum == 0:
 			p_max = jnp.ones(self._n_tasks) / self._n_tasks
 		else:
-			p_max = goals_prob / goals_prob_sum
+			# p_max = goals_prob / goals_prob_sum
+			p_max = goals_prob - goals_prob_sum
 		high_likelihood = jnp.argwhere(p_max == jnp.amax(p_max)).ravel()
 		self._rng_key, subkey = jax.random.split(self._rng_key)
 		return self._tasks[jax.random.choice(subkey, high_likelihood)]
@@ -134,17 +137,24 @@ class TomAgent(Agent):
 			return '', -1
 		
 		states, action = sample
-		sample_prob = self.sample_probability(states, action, conf)
+		sample_prob = jnp.log(self.sample_probability(states, action, conf))
 		self._interaction_likelihoods = jnp.vstack((self._interaction_likelihoods, sample_prob))
 		
-		likelihoods = jnp.cumprod(self._interaction_likelihoods, axis=0)[-1]
-		goals_prob = likelihoods * self._goal_prob
+		# likelihoods = jnp.cumprod(self._interaction_likelihoods, axis=0)[-1]
+		# goals_prob = likelihoods * self._goal_prob
+		likelihoods = jnp.cumsum(self._interaction_likelihoods, axis=0)[-1]
+		goals_prob = likelihoods + self._goal_prob
 		goals_prob_sum = goals_prob.sum()
+		logger.info('Goals prob: ' + str(goals_prob) + ' - ' + str(goals_prob_sum))
 		if goals_prob_sum == 0:
 			p_max = jnp.ones(self._n_tasks) / self._n_tasks
+		# elif goals_prob_sum < 1e-24:
+		# 	p_max = jnp.log(goals_prob) - jnp.log(goals_prob_sum)
 		else:
-			p_max = goals_prob / goals_prob_sum
+			# p_max = goals_prob / goals_prob_sum
+			p_max = goals_prob - goals_prob_sum
 		max_idx = jnp.argwhere(p_max == jnp.amax(p_max)).ravel()
+		logger.info('Task probabilities: ' + str(p_max) + ' - ' + str(max_idx))
 		self._rng_key, subkey = jax.random.split(self._rng_key)
 		max_task_prob = jax.random.choice(subkey, max_idx)
 		task_conf = float(p_max[max_task_prob])
@@ -165,12 +175,12 @@ class TomAgent(Agent):
 	def action(self, obs: jnp.ndarray, sample: Tuple[jnp.ndarray, int], conf: float, logger: Logger, task: str = '') -> int:
 		predict_task, predict_conf = self.bayesian_task_inference(sample, conf, logger)
 		self._predict_task = predict_task
-		return self.get_actions(self._predict_task, obs[self._tasks.index(self._predict_task)])
+		return self.get_actions(self._predict_task, obs)
 	
 	def sub_acting(self, obs: jnp.ndarray, logger: Logger, act_try: int, sample: Tuple[jnp.ndarray, int], conf: float, task: str = '') -> int:
 		predict_task, predict_conf = self.bayesian_task_inference(sample, conf, logger)
 		self._predict_task = predict_task
-		return super().sub_acting(obs[self._tasks.index(self._predict_task)], logger, act_try, sample, conf, self._predict_task if task == '' else task)
+		return super().sub_acting(obs, logger, act_try, sample, conf, self._predict_task if task == '' else task)
 
 
 def write_results_file(data_dir: Path, filename: str, results: Dict, logger: logging.Logger) -> None:
@@ -263,9 +273,11 @@ def load_models(logger: logging.Logger, opt_models_dir: Path, leg_models_dir: Pa
 	leg_model_names = [fname.name for fname in (leg_models_dir / ('%d-hunters' % n_hunters) / ('%s-prey' % prey_type) / 'best').iterdir()]
 	try:
 		# Find the optimal model name for the food location
+		logger.info('Loading optimal model')
 		model_name = ''
 		for name in opt_model_names:
 			if name.find("%d" % n_preys_alive) != -1:
+				logger.info('Found model for %d preys alive: %s' % (n_preys_alive, name))
 				model_name = name
 				break
 		assert model_name != ''
@@ -274,9 +286,11 @@ def load_models(logger: logging.Logger, opt_models_dir: Path, leg_models_dir: Pa
 		optim_models['p%d' % n_preys_alive] = opt_dqn
 		
 		# Find the legible model name for the food location
+		logger.info('Loading legible model')
 		model_name = ''
 		for name in leg_model_names:
 			if name.find("%d" % n_preys_alive) != -1:
+				logger.info('Found model for %d preys alive: %s' % (n_preys_alive, name))
 				model_name = name
 				break
 		assert model_name != ''
@@ -326,6 +340,14 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 	leader_agent.init_interaction(tasks)
 	for idx in range(n_tom_hunters):
 		tom_agents[idx].init_interaction(tasks)
+	prey_agents = {}
+	for i, prey_id in enumerate(prey_ids):
+		if prey_type == 'random':
+			prey_agents[prey_id] = RandomPrey(prey_id, 2, 0, rng_seed + i)
+		elif prey_type == 'greedy':
+			prey_agents[prey_id] = GreedyPrey(prey_id, 2, 0, rng_seed + i)
+		else:
+			prey_agents[prey_id] = PreyAgent(prey_id, 2, 0, rng_seed + i)
 	
 	# Setup environment for test
 	env.reset_init_pos()
@@ -342,13 +364,16 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 	if use_cnn:
 		leader_obs = obs[0].reshape((1, *cnn_shape))
 		leader_sample = [env.make_target_grid_obs(prey)[LEADER_ID].reshape((1, *cnn_shape))  for prey in env.prey_alive_ids]
-		tom_obs = [[env.make_target_grid_obs(prey)[idx].reshape((1, *cnn_shape))  for prey in env.prey_alive_ids] for idx in range(n_tom_hunters)]
+		tom_obs = [[env.make_target_grid_obs(prey)[idx + 1].reshape((1, *cnn_shape)) for prey in env.prey_alive_ids if prey == tom_agents[idx].predict_task][0] for idx in range(n_tom_hunters)]
 	else:
 		leader_obs = obs[0]
 		leader_sample = [env.make_target_grid_obs(prey)[LEADER_ID] for prey in env.prey_alive_ids]
-		tom_obs = [[env.make_target_grid_obs(prey)[idx] for prey in env.prey_alive_ids] for idx in range(n_tom_hunters)]
+		tom_obs = [[env.make_target_grid_obs(prey)[idx + 1] for prey in env.prey_alive_ids if prey == tom_agents[idx].predict_task][0] for idx in range(n_tom_hunters)]
 	actions = (leader_agent.action(leader_obs, (leader_sample, Action.STAY), CONF, logger, 'p%d' % n_preys_alive),
 	           *[tom_agents[idx].action(tom_obs[idx], (leader_sample, Action.STAY), CONF, logger, 'p%d' % n_preys_alive) for idx in range(n_tom_hunters)])
+					
+	for prey_id in env.prey_alive_ids:
+		actions += (prey_agents[prey_id].act(env), )
 	
 	timeout = False
 	n_steps = 0
@@ -367,7 +392,7 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 	logger.info(env.get_full_env_log())
 	while n_preys_alive > 1 and not timeout:
 		predicted_objectives = ','.join(['%s for tom agent %d' % (tom_agents[idx].predict_task, tom_agents[idx].agent_id) for idx in range(n_tom_hunters)])
-		logger.info('Run number %d, step %d: remaining %d foods, predicted objective %s and real objective %s from ' % (run_n + 1, n_steps + 1, env.n_preys_alive,
+		logger.info('Run number %d, step %d: remaining %d preys, predicted objective %s and real objective %s from ' % (run_n + 1, n_steps + 1, env.n_preys_alive,
 																														predicted_objectives, task) + ', '.join(env.prey_alive_ids))
 		n_steps += 1
 		if use_cnn:
@@ -376,16 +401,10 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 			last_leader_sample = ([env.make_target_grid_obs(prey)[LEADER_ID] for prey in env.prey_alive_ids], actions[LEADER_ID])
 		if any([task != tom_agents[idx].predict_task for idx in range(n_tom_hunters)]):
 			later_error = n_steps
+		logger.info('Actions: %s' % ', '.join([str(Action(action).name) for action in actions]))
 		obs, _, _, timeout, _ = env.step(actions)
 		if use_render:
 			env.render()
-		
-		if use_cnn:
-			leader_obs = obs[0].reshape((1, *cnn_shape))
-			tom_obs = [[env.make_target_grid_obs(prey)[idx].reshape((1, *cnn_shape))  for prey in env.prey_alive_ids] for idx in range(n_tom_hunters)]
-		else:
-			leader_obs = obs[0]
-			tom_obs = [[env.make_target_grid_obs(prey)[idx] for prey in env.prey_alive_ids] for idx in range(n_tom_hunters)]
 		
 		if timeout:
 			n_pred_steps += [later_error - later_food_step]
@@ -436,8 +455,27 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 						tom_agents[idx].sample_models = leg_models
 				
 				# Get next objective
+				preys_left = env.prey_alive_ids.copy()
 				task = preys_left.pop(rng_gen.integers(n_preys_alive))
 				env.target = task
+		
+		# Update leader and ToM agents' observations
+		logger.info('Preys alive: %s' % ', '.join([str(prey) for prey in env.prey_alive_ids]))
+		if use_cnn:
+			leader_obs = obs[0].reshape((1, *cnn_shape))
+			for idx in range(n_tom_hunters):
+				for prey in env.prey_alive_ids:
+					if prey == tom_agents[idx].predict_task:
+						# for layer in env.make_target_grid_obs(prey)[idx + 1]:
+						# 	print(layer)
+						# input()
+						tom_obs[idx] = env.make_target_grid_obs(prey)[idx + 1].reshape((1, *cnn_shape))
+		else:
+			leader_obs = obs[0]
+			for idx in range(n_tom_hunters):
+				for prey in env.prey_alive_ids:
+					if prey == tom_agents[idx].predict_task:
+						tom_obs[idx] = env.make_target_grid_obs(prey)[idx + 1].reshape((1, *cnn_shape))
 		
 		current_state = ''.join([''.join(str(x) for x in env.agents[a_id].pos) for a_id in env.agents.keys() if env.agents[a_id].alive])
 		if is_deadlock(recent_states, current_state, actions):
@@ -454,6 +492,8 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 					   *[tom_agents[idx].action(tom_obs[idx], last_leader_sample, CONF, logger, 'p%d' % n_preys_alive) for idx in range(n_tom_hunters)])
 		
 		actions = coordinate_agents(env, [tom_agents[idx].predict_task for idx in range(n_tom_hunters)], actions, n_tom_hunters)
+		for prey_id in env.prey_ids:
+			actions += (prey_agents[prey_id].act(env) if prey_id in env.prey_alive_ids else Action.STAY.value, )
 		
 		recent_states.append(current_state)
 		if len(recent_states) > 3:
@@ -520,6 +560,7 @@ def eval_legibility(n_runs: int, test_mode: int, logger: logging.Logger, opt_mod
 				                    'test_mode-%d_field_%d-%d_hunters-%d_%s-prey' % (test_mode, field_dims[0], field_dims[1], len(hunters), prey_type), results, logger, run)
 
 			logger.info('Run %d results: ' % run + str(results))
+
 
 def main():
 	
@@ -651,6 +692,7 @@ def main():
 	file_handler.setLevel(logging.INFO)
 	logger.addHandler(file_handler)
 	
+	logger.info('Starting pursuit testing')
 	eval_legibility(n_runs, mode, logger, opt_models_dir, leg_models_dir, field_size, hunters, preys, sight, prey_ids, prey_type, require_catch, catch_reward,
 	                steps_episode, gamma, n_layers, relu, layer_sizes, use_cnn, use_dueling_dqn, use_ddqn, data_dir, cnn_properties, use_paralell, use_render, start_run)
 	
