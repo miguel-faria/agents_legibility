@@ -101,24 +101,10 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 				# interact with environment
 				explore = rng_gen.random() < eps
 				if explore:
-					leg_actions = list(env.action_space.sample()[:dqn_model.n_leg_agents])
+					hunter_actions = env.action_space.sample().tolist()[:env.n_hunters]
 					prey_actions = [env.agents[prey_id].act(env) for prey_id in env.prey_alive_ids]
-					optimal_actions = []
-					for a_idx in range(dqn_model.n_leg_agents, env.n_hunters):
-						if dqn_model.agent_dqn.cnn_layer:
-							cnn_obs = obs[a_idx].reshape((1, *cnn_shape))
-							q_values = dqn_model.agent_dqn.q_network.apply(dqn_model.optimal_models[dqn_target_key].params, cnn_obs)[0]
-						else:
-							q_values = dqn_model.agent_dqn.q_network.apply(dqn_model.optimal_models[dqn_target_key].params, obs[a_idx])
-
-						if greedy_action:
-							action = q_values.argmax(axis=-1)
-						else:
-							pol = np.isclose(q_values, q_values.max(), rtol=1e-10, atol=1e-10).astype(int)
-							pol = pol / pol.sum()
-							action = rng_gen.choice(range(env.action_space[0].n), p=pol)
-						optimal_actions.append(action)
-					actions = np.array(leg_actions + optimal_actions + prey_actions)
+					actions = np.array(hunter_actions + prey_actions)
+					
 				else:
 					actions = []
 					for a_idx in range(env.n_hunters):
@@ -161,10 +147,10 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					env.render()
 				
 				legible_rewards = np.zeros(dqn_model.num_agents)
-				live_goals = env.prey_ids
-				n_goals = len(env.prey_ids)
+				live_goals = env.prey_alive_ids
+				n_goals = len(env.prey_alive_ids)
 				if n_goals > 1:
-					for a_idx in range(dqn_model.num_agents):
+					for a_idx in range(dqn_model.n_leg_agents):
 						act_q_vals = np.zeros(n_goals)
 						action = actions[a_idx]
 						goal_action_q = 0.0
@@ -192,8 +178,12 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 							legible_rewards[a_idx] = (act_q_vals[live_goals.index(dqn_target)] / act_q_vals.sum()) + rewards[a_idx]
 						else:
 							legible_rewards[a_idx] = act_q_vals[live_goals.index(dqn_target)] / act_q_vals.sum()
+					
+					for a_idx in range(dqn_model.n_leg_agents, env.n_hunters):
+						legible_rewards[a_idx] = rewards[a_idx]
+				
 				else:
-					for a_idx in range(dqn_model.n_leg_agents):
+					for a_idx in range(dqn_model.num_agents):
 						legible_rewards[a_idx] = rewards[a_idx]
 				
 				if terminated or ('caught_target' in infos.keys() and infos['caught_target'] == env.target):
@@ -207,8 +197,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 				# store new samples
 				if dqn_model.use_vdn:
 					hunter_actions = actions[:env.n_hunters]
-					store_rewards = np.hstack((legible_rewards[:dqn_model.n_leg_agents], rewards[dqn_model.n_leg_agents:env.n_hunters]))
-					dqn_model.replay_buffer.add(obs, next_obs, hunter_actions, store_rewards, finished[0], [])
+					dqn_model.replay_buffer.add(obs, next_obs, hunter_actions, legible_rewards, finished[0], [])
 				else:
 					for a_idx in range(env.n_hunters):
 						dqn_model.replay_buffer.add(obs[a_idx], next_obs[a_idx], actions[a_idx], legible_rewards[a_idx], finished[a_idx], [])
@@ -256,6 +245,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					episode_rewards = 0
 					episode_start = epoch
 					epoch = 0
+					dqn_target = env.target
 		
 	except ValueError as err:
 		logger.error(err)

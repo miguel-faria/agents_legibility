@@ -25,7 +25,7 @@ from gymnasium.spaces import MultiBinary, MultiDiscrete
 
 RNG_SEED = 6102023
 TEST_RNG_SEED = 4072023
-N_TESTS = 100
+N_TESTS = 250
 MIN_TRAIN_PERFORMANCE = 0.9
 PREY_TYPES = {'idle': 0, 'greedy': 1, 'random': 2}
 
@@ -112,7 +112,9 @@ def train_pursuit_dqn(dqn_model: SingleModelMADQN, env: TargetPursuitEnv, num_it
 			
 			explore = rng_gen.random() < eps
 			if explore:
-				actions = np.hstack((env.action_space.sample()[:env.n_hunters], np.array([env.agents[prey].act(env) for prey in env.prey_alive_ids])))
+				hunter_actions = env.action_space.sample().tolist()[:env.n_hunters]
+				prey_actions = [env.agents[prey].act(env) for prey in env.prey_alive_ids]
+				actions = np.array(hunter_actions + prey_actions)
 			else:
 				actions = []
 				for a_idx in range(env.n_hunters):
@@ -160,6 +162,7 @@ def train_pursuit_dqn(dqn_model: SingleModelMADQN, env: TargetPursuitEnv, num_it
 				for a_idx in range(env.n_hunters):
 					dqn_model.replay_buffer.add(obs[a_idx], next_obs[a_idx], actions[a_idx], rewards[a_idx], finished[a_idx], [])
 			episode_rewards += (sum(rewards[:env.n_hunters]) / env.n_hunters)
+			
 			if use_tracker and epoch_logging:
 				performance_tracker.log({tracker_panel + "-charts/performance/reward": sum(rewards)}, step=epoch)
 			obs = next_obs
