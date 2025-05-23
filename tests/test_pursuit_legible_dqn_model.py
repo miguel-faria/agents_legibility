@@ -45,9 +45,9 @@ def main():
 	use_cnn = True
 	use_render = True
 	n_hunters = 2
-	n_legible_agents = 1
-	n_preys = 7
-	n_spawn_preys = 7
+	n_legible_agents = 0
+	n_preys = 1
+	n_spawn_preys = 1
 	hunter_ids = ['h%d' % i for i in range(1, n_hunters + 1)]
 	field_size = (10, 10)
 	sight = field_size[0]
@@ -68,8 +68,8 @@ def main():
 	
 	data_dir = Path(__file__).parent.absolute().parent.absolute() / 'data'
 	models_dir = Path('/mnt/d/Research/models/legibility')
-	optimal_model_path = (models_dir / 'pursuit_single_vdn_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-hunters' % n_hunters)) / ('%s-prey' % prey_type) / 'best'
-	legible_model_path = (models_dir / 'pursuit_legible_vdn_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-hunters' % n_hunters)) / ('%s-prey' % prey_type) / 'best'
+	optimal_model_path = (models_dir / 'pursuit_single_vdn_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-hunters' % n_hunters)) / ('%s-prey' % prey_type) / '20250522-165216'
+	legible_model_path = (models_dir / 'pursuit_legible_vdn_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-hunters' % n_hunters)) / ('%s-prey' % prey_type) / '20250522-135112'
 	
 	with open(data_dir / 'configs' / 'q_network_architectures.yaml') as architecture_file:
 		arch_data = yaml.safe_load(architecture_file)
@@ -122,6 +122,7 @@ def main():
 		print('Agents: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[hunter].agent_id, *env.agents[hunter].pos) for hunter in env.hunter_ids]))
 		print('Preys: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[prey].agent_id, *env.agents[prey].pos) for prey in env.prey_alive_ids]))
 		print('Objective prey: %s @ (%d, %d)' % (env.target, *env.agents[env.target].pos))
+		# input()
 		while not game_over:
 			
 			actions = []
@@ -163,9 +164,9 @@ def main():
 			print(env.get_env_log())
 			obs = next_obs
 			epoch += 1
-			input()
 			if use_render:
 				env.render()
+			# input()
 			
 			if finished or timeout:
 				game_over = True

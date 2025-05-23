@@ -16,7 +16,7 @@ ACTION_MAP = {0: 'None', 1: 'Up', 2: 'Down', 3: 'Left', 4: 'Right', 5: 'Load'}
 KEY_MAP = {'w': 1, 's': 2, 'a': 3, 'd': 4, 'q': 0, 'e': 5}
 RNG_SEED = 25456789
 TEMPS = [0.1, 0.15, 0.2, 0.25, 0.5, 1.0]
-N_CYCLES = 2
+N_CYCLES = 1
 
 
 def main():
@@ -24,15 +24,16 @@ def main():
 	n_leg_agents = 1
 	n_players = 2
 	player_level = 1
-	field_size = (8, 8)
+	field_size = (10, 10)
 	n_foods = 8
 	n_foods_spawn = 1
-	sight = 8
-	max_steps = 600
+	sight = 10
+	max_steps = 100
 	food_level = 2
+	n_runs = 10
 	architecture = "v3"
 	data_dir = Path(__file__).parent.absolute().parent.absolute() / 'data'
-	models_dir = Path(__file__).parent.absolute().parent.absolute() / 'models'
+	models_dir = Path('/mnt/d/Research/models/legibility')
 	log_dir = Path(__file__).parent.absolute().parent.absolute() / 'logs' / 'lb_foraging'
 	with open(data_dir / 'configs' / 'lbforaging_plan_configs.yaml') as file:
 		config_params = yaml.full_load(file)
@@ -59,7 +60,7 @@ def main():
 	optim_dir = (models_dir / 'lb_coop_single_vdn_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-agents' % n_players) /
 				 ('%d-foods_%d-food-level' % (n_foods_spawn, food_level)) / 'best')
 	
-	obj_food = tuple([3, 0])
+	obj_food = tuple([3, 6])
 	env = FoodCOOPLBForaging(n_players, player_level, field_size, n_foods, sight, max_steps, True, food_level, RNG_SEED, food_locs, food_locs[1],
 							 render_mode=['rgb_array', 'human'], use_encoding=False, agent_center=True, grid_observation=True)
 	
@@ -95,11 +96,12 @@ def main():
 		finished_runs = 0
 		timeout_runs = 0
 
-		for i in range(250):
+		for i in range(n_runs):
 
 			print('Iteration: %d' % (i + 1))
 			print(env.get_full_env_log())
 			done = False
+			epoch = 0
 			while not done:
 				actions = []
 				for a_idx in range(n_players):
@@ -110,12 +112,17 @@ def main():
 								q_values = legible_dqn_model.q_network.apply(online_params, obs[a_idx].reshape((1, *obs_shape)))[0]
 							else:
 								q_values = legible_dqn_model.q_network.apply(online_params, obs[a_idx])
+					
+							print('legible', a_idx, env.players[a_idx].name, q_values)
 						else:
 							online_params = optim_dqn_model.online_state.params
 							if use_cnn:
 								q_values = optim_dqn_model.q_network.apply(online_params, obs[a_idx].reshape((1, *obs_shape)))[0]
 							else:
 								q_values = optim_dqn_model.q_network.apply(online_params, obs[a_idx])
+					
+							print('optimal', a_idx, env.players[a_idx].name, q_values)
+					
 					else:
 						online_params = legible_dqn_model.online_state.params
 						if use_cnn:
@@ -131,9 +138,12 @@ def main():
 				print('Actions: ' + ' & '.join([ACTION_MAP[action] for action in actions]))
 				next_obs, rewards, finished, timeout, info = env.step(actions)
 				print(env.get_env_log())
-				print('Rewards: ', str(rewards))
+				# print('Rewards: ', str(rewards))
 				# env.render()
 				# input()
+
+				obs = next_obs
+				epoch += 1
 
 				if finished or timeout:
 					if finished:
@@ -146,10 +156,10 @@ def main():
 					obs, *_ = env.reset()
 					done = True
 					# env.render()
+			
+			print('Epochs needed to finish: %d' % epoch)
 
-				obs = next_obs
-
-		print('Cycle %d: Finished %d out of 250 runs.\tTimeout %d out of 250 runs.' % (cycle+1, finished_runs, timeout_runs))
+		print('Cycle %d: Finished %d out of %d runs.\tTimeout %d out of %d runs.' % (cycle+1, finished_runs, n_runs, timeout_runs, n_runs))
 
 
 if __name__ == '__main__':
