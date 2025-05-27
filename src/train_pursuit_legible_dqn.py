@@ -191,7 +191,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 				# store new samples
 				if dqn_model.use_vdn:
 					hunter_actions = actions[:env.n_hunters]
-					logger.info('Legible rewards stored: ' + str(legible_rewards[:dqn_model.n_leg_agents]))
+					# logger.info('Legible rewards stored: ' + str(legible_rewards))
 					dqn_model.replay_buffer.add(obs, next_obs, hunter_actions, legible_rewards, finished[0], [])
 				else:
 					for a_idx in range(env.n_hunters):
@@ -239,7 +239,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					done = True
 					episode_rewards = 0
 					episode_start = epoch
-					epoch = 0
+					# epoch = 0
 					dqn_target = env.target
 		
 	except ValueError as err:
