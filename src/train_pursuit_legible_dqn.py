@@ -12,6 +12,7 @@ import time
 import logging
 import yaml
 import wandb
+import traceback
 
 from dl_algos.single_model_madqn import LegibleSingleMADQN
 from dl_algos.dqn import DQNetwork, EPS_TYPE
@@ -142,8 +143,8 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					env.render()
 				
 				legible_rewards = np.zeros(dqn_model.num_agents)
-				live_goals = env.prey_alive_ids
-				n_goals = len(env.prey_alive_ids)
+				live_goals = env._prey_ids
+				n_goals = len(env.prey_ids)
 				if n_goals > 1:
 					for a_idx in range(dqn_model.n_leg_agents):
 						act_q_vals = np.zeros(n_goals)
@@ -243,7 +244,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					dqn_target = env.target
 		
 	except ValueError as err:
-		logger.error(err)
+		logger.error(str(err) + '\n' + traceback.format_exc())
 		return
 	
 
