@@ -110,7 +110,8 @@ if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" 
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --tasks-per-node=1
-#SBATCH --gres=gpu:1
+# #SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:quadro6000:1
 #SBATCH --time=04:00:00
 #SBATCH --mem=8G
 #SBATCH --qos=gpu-short
@@ -131,12 +132,13 @@ EOF
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --tasks-per-node=1
-#SBATCH --gres=gpu:1
+# #SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:quadro6000:1
 #SBATCH --time=04:00:00
 #SBATCH --mem=8G
 #SBATCH --qos=gpu-short
 #SBATCH --output=job-%x-%j.out
-#SBATCH --partition=a6000
+# #SBATCH --partition=a6000
 source $conda_dir/bin/activate drl_env
 python ${script_path}/run_test_pursuit_legible_collaboration.py --tests ${end_test} --start-run ${start_test} --mode ${test_mode} --field-len ${field_len} --preys ${max_preys} --hunters ${n_hunters} --prey-type ${prey_type} --logs-dir ${logs_dir} --models-dir ${models_dir} --data-dir ${data_dir}
 conda deactivate
