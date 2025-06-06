@@ -12,6 +12,7 @@ import time
 import logging
 import yaml
 import wandb
+import traceback
 
 from dl_algos.single_model_madqn import LegibleSingleMADQN
 from dl_algos.dqn import DQNetwork, EPS_TYPE
@@ -255,10 +256,12 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					done = True
 					episode_rewards = 0
 					episode_start = epoch
-					epoch = 0
+					# epoch = 0
+					dqn_target = env.target
+					avg_loss = []
 		
 	except ValueError as err:
-		logger.error(err)
+		logger.error(str(err) + '\n' + traceback.format_exc())
 		return
 	
 
