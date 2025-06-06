@@ -25,7 +25,7 @@ from gymnasium.spaces import MultiBinary, MultiDiscrete
 
 RNG_SEED = 6102023
 TEST_RNG_SEED = 4072023
-N_TESTS = 100
+N_TESTS = 250
 MIN_TRAIN_PERFORMANCE = 0.9
 PREY_TYPES = {'idle': 0, 'greedy': 1, 'random': 2}
 
@@ -99,20 +99,19 @@ def train_pursuit_dqn(dqn_model: SingleModelMADQN, env: TargetPursuitEnv, num_it
 		episode_start = epoch
 		avg_loss = []
 		logger.info("Iteration %d out of %d" % (it + 1, num_iterations))
-		logger.info('Agents: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[hunter].agent_id, *env.agents[hunter].pos) for hunter in env.hunter_ids]))
+		logger.info('Hunters: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[hunter].agent_id, *env.agents[hunter].pos) for hunter in env.hunter_ids]))
+		logger.info('Number of preys spawn:\t%d' % env.n_preys_alive)
 		logger.info('Preys: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[prey].agent_id, *env.agents[prey].pos) for prey in env.prey_alive_ids]))
 		logger.info('Objective prey: %s @ (%d, %d)' % (env.target, *env.agents[env.target].pos))
+		eps = DQNetwork.eps_update(EPS_TYPE[eps_type], initial_eps, final_eps, exploration_decay, it, num_iterations)
 		while not done:
-			
+	
 			# interact with environment
-			if eps_type == 'epoch':
-				eps = DQNetwork.eps_update(EPS_TYPE[eps_type], initial_eps, final_eps, exploration_decay, epoch, max_timesteps)
-			else:
-				eps = DQNetwork.eps_update(EPS_TYPE[eps_type], initial_eps, final_eps, exploration_decay, it, num_iterations)
-			
 			explore = rng_gen.random() < eps
 			if explore:
-				actions = np.hstack((env.action_space.sample()[:env.n_hunters], np.array([env.agents[prey].act(env) for prey in env.prey_alive_ids])))
+				hunter_actions = env.action_space.sample().tolist()[:env.n_hunters]
+				prey_actions = [env.agents[prey].act(env) for prey in env.prey_alive_ids]
+				actions = np.array(hunter_actions + prey_actions)
 			else:
 				actions = []
 				for a_idx in range(env.n_hunters):
@@ -135,12 +134,16 @@ def train_pursuit_dqn(dqn_model: SingleModelMADQN, env: TargetPursuitEnv, num_it
 				
 				for prey_id in env.prey_alive_ids:
 					actions += [env.agents[prey_id].act(env)]
+				
 				actions = np.array(actions)
 			
 			if debug:
 				logger.info(env.get_env_log() + 'Actions: ' + str([Action(act).name for act in actions]) + ' Explored? %r' % explore + '\n')
 			
 			next_obs, rewards, terminated, timeout, infos = env.step(actions)
+			if debug:
+				logger.info(env.get_env_log() + 'Terminated? %r ' % terminated + 'Timedout? %r' % timeout + '\n')
+			
 			if use_render:
 				env.render()
 			
@@ -160,6 +163,7 @@ def train_pursuit_dqn(dqn_model: SingleModelMADQN, env: TargetPursuitEnv, num_it
 				for a_idx in range(env.n_hunters):
 					dqn_model.replay_buffer.add(obs[a_idx], next_obs[a_idx], actions[a_idx], rewards[a_idx], finished[a_idx], [])
 			episode_rewards += (sum(rewards[:env.n_hunters]) / env.n_hunters)
+			
 			if use_tracker and epoch_logging:
 				performance_tracker.log({tracker_panel + "-charts/performance/reward": sum(rewards)}, step=epoch)
 			obs = next_obs
@@ -497,7 +501,7 @@ def main():
 							  use_render, greedy_actions, args.ep_log, curriculum_model_path, use_tracker, wandb_run, tracker_panel, debug)
 			
 			logger.info('Saving final model')
-			dqn_model.save_model(('preys-%d' % n_preys), model_path, logger)
+			dqn_model.save_model(('%d-preys' % n_preys), model_path, logger)
 			sys.stdout.flush()
 			
 			####################

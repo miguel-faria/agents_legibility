@@ -45,9 +45,9 @@ def main():
 	use_cnn = True
 	use_render = True
 	n_hunters = 2
-	n_legible_agents = 1
-	n_preys = 7
-	n_spawn_preys = 7
+	n_legible_agents = 2
+	n_preys = 2
+	n_spawn_preys = 2
 	hunter_ids = ['h%d' % i for i in range(1, n_hunters + 1)]
 	field_size = (10, 10)
 	sight = field_size[0]
@@ -122,6 +122,7 @@ def main():
 		print('Agents: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[hunter].agent_id, *env.agents[hunter].pos) for hunter in env.hunter_ids]))
 		print('Preys: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[prey].agent_id, *env.agents[prey].pos) for prey in env.prey_alive_ids]))
 		print('Objective prey: %s @ (%d, %d)' % (env.target, *env.agents[env.target].pos))
+		# input()
 		while not game_over:
 			
 			actions = []
@@ -163,9 +164,9 @@ def main():
 			print(env.get_env_log())
 			obs = next_obs
 			epoch += 1
-			input()
 			if use_render:
 				env.render()
+			# input()
 			
 			if finished or timeout:
 				game_over = True

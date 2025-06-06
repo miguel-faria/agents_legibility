@@ -6,10 +6,11 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
-#SBATCH --time=4-00:00:00
+# #SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:quadro6000:1
+#SBATCH --time=7-00:00:00
 #SBATCH --mem=4G
-#SBATCH --qos=gpu-long
+#SBATCH --qos=gpu-hero
 #SBATCH --output="job-%x-%j.out"
 # #SBATCH --partition=a6000
 date;hostname;pwd
@@ -37,7 +38,7 @@ fi
 
 source "$conda_dir"/bin/activate drl_env
 if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" = "maia" ] ; then
-  python "$script_path"/run_train_pursuit_single_vdn_dqn.py --field-len 20 --hunters 3 --catch-reward 5 --prey-type greedy --batch-size 64 --buffer-size 100000 --iterations 40000 --episode-steps 800 --warmup 800 --limits 2 2 --eps-type linear --eps-decay 0.3 --start-eps 0.5 --online-lr 0.000025 --train-thresh 0.95 --use-lower-curriculum --curriculum-path /mnt/data-artemis/miguelfaria/deep_rl/models/pursuit_single_vdn_dqn/20x20-field/2-hunters/greedy-prey/best/2-preys_single_model.model --logs-dir /mnt/scratch-artemis/miguelfaria/logs/pursuit --models-dir /mnt/data-artemis/miguelfaria/deep_rl/models --data-dir /mnt/data-artemis/miguelfaria/deep_rl/data
+  python "$script_path"/run_train_pursuit_single_vdn_dqn.py --field-len 10 --hunters 2 --catch-reward 5 --prey-type random --batch-size 64 --buffer-size 5000 --iterations 35000 --episode-steps 800 --warmup 800 --limits 1 1 --eps-type linear --eps-decay 0.17 --start-eps 1.0 --online-lr 0.00005 --train-thresh 0.95 --use-lower-curriculum --curriculum-path /mnt/data-artemis/miguelfaria/deep_rl/models/pursuit_single_vdn_dqn/20x20-field/2-hunters/greedy-prey/best/2-preys_single_model.model --logs-dir /mnt/scratch-artemis/miguelfaria/logs/pursuit --models-dir /mnt/data-artemis/miguelfaria/deep_rl/models --data-dir /mnt/data-artemis/miguelfaria/deep_rl/data
 elif [ "$HOSTNAME" = "hera" ] ; then
   nohup python "$script_path"/run_train_pursuit_single_vdn_dqn.py --field-len 20 --hunters 2 --catch-reward 5 --prey-type idle --batch-size 64 --buffer-size 2500 --iterations 4000 --episode-steps 800 --warmup 800 --limits 1 4 --eps-type log --eps-decay 0.175 --use-lower-curriculum --logs-dir /mnt/data-hera1/miguelfaria/deep_rl/logs/pursuit --models-dir /mnt/data-hera1/miguelfaria/deep_rl/models --data-dir /mnt/data-hera1/miguelfaria/deep_rl/data
 else

@@ -25,7 +25,8 @@ from datetime import datetime
 from gymnasium.spaces import MultiBinary, MultiDiscrete
 from wandb.wandb_run import Run
 
-RNG_SEED = 6102023
+# RNG_SEED = 6102023
+RNG_SEED = 3062025
 TEST_RNG_SEED = 4072023
 N_TESTS = 250
 PREY_TYPES = {'idle': 0, 'greedy': 1, 'random': 2}
@@ -58,8 +59,8 @@ def get_target_seqs(targets: List[str]) -> List[Tuple[str]]:
 		return None
 
 
-def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitEnv, num_iterations: int, batch_size: int, optim_learn_rate: float,
-							  tau: float, initial_eps: float, final_eps: float, eps_type: str, reward_type: str, rng_seed: int, logger: logging.Logger, cnn_shape: Tuple[int],
+def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitEnv, num_iterations: int, batch_size: int, online_lr: float,
+							  target_lr: float, initial_eps: float, final_eps: float, eps_type: str, reward_type: str, rng_seed: int, logger: logging.Logger, cnn_shape: Tuple[int],
 							  exploration_decay: float = 0.99, warmup: int = 0, train_freq: int = 1, target_freq: int = 100, tensorboard_frequency: int = 1,
 							  use_render: bool = False, greedy_action: bool = True, sofmax_temp: float = 1.0, initial_model_path: str = '', use_tracker: bool = False,
 							  performance_tracker: Optional[Run] = None, tracker_panel: str = '', debug: bool = False, dqn_target_key: str = '') -> None:
@@ -69,10 +70,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 	# Setup DQNs for training
 	obs, *_ = env.reset()
 	if not dqn_model.agent_dqn.dqn_initialized:
-		if dqn_model.agent_dqn.cnn_layer:
-			dqn_model.agent_dqn.init_network_states(rng_seed, obs[0].reshape((1, *cnn_shape)), optim_learn_rate, initial_model_path)
-		else:
-			dqn_model.agent_dqn.init_network_states(rng_seed, obs[0], optim_learn_rate, initial_model_path)
+		dqn_model.initialize_network(cnn_shape, logger, obs, online_lr, rng_seed, initial_model_path)
 
 	start_time = time.time()
 	sys.stdout.flush()
@@ -102,24 +100,10 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 				# interact with environment
 				explore = rng_gen.random() < eps
 				if explore:
-					leg_actions = list(env.action_space.sample()[:dqn_model.n_leg_agents])
+					hunter_actions = env.action_space.sample().tolist()[:env.n_hunters]
 					prey_actions = [env.agents[prey_id].act(env) for prey_id in env.prey_alive_ids]
-					optimal_actions = []
-					for a_idx in range(dqn_model.n_leg_agents, env.n_hunters):
-						if dqn_model.agent_dqn.cnn_layer:
-							cnn_obs = obs[a_idx].reshape((1, *cnn_shape))
-							q_values = dqn_model.agent_dqn.q_network.apply(dqn_model.optimal_models[dqn_target_key].params, cnn_obs)[0]
-						else:
-							q_values = dqn_model.agent_dqn.q_network.apply(dqn_model.optimal_models[dqn_target_key].params, obs[a_idx])
+					actions = np.array(hunter_actions + prey_actions)
 
-						if greedy_action:
-							action = q_values.argmax(axis=-1)
-						else:
-							pol = np.isclose(q_values, q_values.max(), rtol=1e-10, atol=1e-10).astype(int)
-							pol = pol / pol.sum()
-							action = rng_gen.choice(range(env.action_space[0].n), p=pol)
-						optimal_actions.append(action)
-					actions = np.array(leg_actions + optimal_actions + prey_actions)
 				else:
 					actions = []
 					for a_idx in range(env.n_hunters):
@@ -130,8 +114,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 							online_params = dqn_model.optimal_models[dqn_target_key].params
 	
 						if dqn_model.agent_dqn.cnn_layer:
-							cnn_obs = obs[a_idx].reshape((1, *cnn_shape))
-							q_values = dqn_model.agent_dqn.q_network.apply(online_params, cnn_obs)[0]
+							q_values = dqn_model.agent_dqn.q_network.apply(online_params, obs[a_idx].reshape((1, *cnn_shape)))[0]
 						else:
 							q_values = dqn_model.agent_dqn.q_network.apply(online_params, obs[a_idx])
 						
@@ -141,7 +124,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 							pol = np.isclose(q_values, q_values.max(), rtol=1e-10, atol=1e-10).astype(int)
 							pol = pol / pol.sum()
 							action = rng_gen.choice(range(env.action_space[0].n), p=pol)
-						# action = jax.device_get(action)
+						action = jax.device_get(action)
 						episode_q_vals += (float(q_values[int(action)]) / env.n_hunters)
 						actions += [action]
 					
@@ -154,7 +137,6 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					logger.info(env.get_env_log() + 'Actions: ' + str([Action(act).name for act in actions]) + ' Explored? %r' % explore + '\n')
 				
 				next_obs, rewards, terminated, timeout, infos = env.step(actions)
-				
 				if debug:
 					logger.info(env.get_env_log() + 'Terminated? %r ' % terminated + 'Timedout? %r' % timeout + '\n')
 				
@@ -162,10 +144,10 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					env.render()
 				
 				legible_rewards = np.zeros(dqn_model.num_agents)
-				live_goals = env.prey_ids
+				live_goals = env._prey_ids
 				n_goals = len(env.prey_ids)
 				if n_goals > 1:
-					for a_idx in range(dqn_model.num_agents):
+					for a_idx in range(dqn_model.n_leg_agents):
 						act_q_vals = np.zeros(n_goals)
 						action = actions[a_idx]
 						goal_action_q = 0.0
@@ -193,9 +175,12 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 							legible_rewards[a_idx] = (act_q_vals[live_goals.index(dqn_target)] / act_q_vals.sum()) + rewards[a_idx]
 						else:
 							legible_rewards[a_idx] = act_q_vals[live_goals.index(dqn_target)] / act_q_vals.sum()
-				else:
-					for a_idx in range(dqn_model.n_leg_agents):
+
+					for a_idx in range(dqn_model.n_leg_agents, env.n_hunters):
 						legible_rewards[a_idx] = rewards[a_idx]
+
+				else:
+					legible_rewards = rewards[:env.n_hunters]
 				
 				if terminated or ('caught_target' in infos.keys() and infos['caught_target'] == env.target):
 					finished = np.ones(dqn_model.num_agents)
@@ -208,8 +193,8 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 				# store new samples
 				if dqn_model.use_vdn:
 					hunter_actions = actions[:env.n_hunters]
-					store_rewards = np.hstack((legible_rewards[:dqn_model.n_leg_agents], rewards[dqn_model.n_leg_agents:env.n_hunters]))
-					dqn_model.replay_buffer.add(obs, next_obs, hunter_actions, store_rewards, finished[0], [])
+					# logger.info('Legible rewards stored: ' + str(legible_rewards))
+					dqn_model.replay_buffer.add(obs, next_obs, hunter_actions, legible_rewards, finished[0], [])
 				else:
 					for a_idx in range(env.n_hunters):
 						dqn_model.replay_buffer.add(obs[a_idx], next_obs[a_idx], actions[a_idx], legible_rewards[a_idx], finished[a_idx], [])
@@ -217,20 +202,20 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 	
 				if use_tracker:
 					performance_tracker.log({
-							tracker_panel + "-charts/performance/legible_reward": 	sum(legible_rewards) / dqn_model.n_leg_agents,
-							tracker_panel + "-charts/performance/reward": 			sum(rewards[:env.n_hunters]) / env.n_hunters},
+							tracker_panel + "-charts/performance/legible_reward": 	sum(legible_rewards[:dqn_model.n_leg_agents]) / dqn_model.n_leg_agents,
+							tracker_panel + "-charts/performance/reward": 			sum(rewards[:dqn_model.n_leg_agents]) / dqn_model.n_leg_agents},
 							step=(epoch + episode_start))
 				obs = next_obs
 				
 				# update Q-network and target network
 				if epoch >= warmup:
 					if epoch % train_freq == 0:
-						loss = jax.device_get(dqn_model.update_model(batch_size, epoch - start_record_epoch, start_time,
+						loss = jax.device_get(dqn_model.update_model(batch_size, epoch, start_time,
 																	 tensorboard_frequency, logger, cnn_shape=cnn_shape))
 						avg_loss += [loss]
 					
 					if epoch % target_freq == 0:
-						dqn_model.agent_dqn.update_target_model(tau)
+						dqn_model.agent_dqn.update_target_model(target_lr)
 				
 				epoch += 1
 				sys.stdout.flush()
@@ -604,13 +589,14 @@ def main():
 			                          greedy_actions, temp, curriculum_model_path, use_tracker, wandb_run, tracker_panel, debug, target_name)
 
 			logger.info('Saving final model')
-			agent_madqn.save_model(('preys-%d' % n_preys), model_path, logger)
+			agent_madqn.save_model(('%d-preys' % n_preys), model_path, logger)
 			sys.stdout.flush()
 
 			####################
 			## Testing Model ##
 			####################
-			env = TargetPursuitEnv(hunters, preys, field_size, sight, prey_ids, require_catch, max_steps, use_layer_obs=True)
+			env = TargetPursuitEnv(hunters, preys, field_size, sight, prey_ids, require_catch, max_steps, use_layer_obs=True,
+								   catch_reward=args.catch_reward)
 			env.seed(TEST_RNG_SEED)
 			np.random.seed(TEST_RNG_SEED)
 			random.seed(TEST_RNG_SEED)
