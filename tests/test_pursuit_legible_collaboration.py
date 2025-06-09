@@ -81,20 +81,20 @@ class TomAgent(Agent):
 	def init_interaction(self, interaction_tasks: List[str]):
 		self._tasks = interaction_tasks.copy()
 		self._n_tasks = len(interaction_tasks)
-		# self._goal_prob = jnp.ones(self._n_tasks) / self._n_tasks
-		# self._interaction_likelihoods = jnp.ones(self._n_tasks)
-		self._goal_prob = jnp.log(jnp.ones(self._n_tasks) / self._n_tasks)
-		self._interaction_likelihoods = jnp.zeros(self._n_tasks)
+		self._goal_prob = jnp.ones(self._n_tasks) / self._n_tasks
+		self._interaction_likelihoods = jnp.ones(self._n_tasks)
+		# self._goal_prob = jnp.log(jnp.ones(self._n_tasks) / self._n_tasks)
+		# self._interaction_likelihoods = jnp.zeros(self._n_tasks)
 		self._predict_task = interaction_tasks[0]
 	
 	def reset_inference(self, tasks: List = None):
 		if tasks:
 			self._tasks = tasks.copy()
 			self._n_tasks = len(self._tasks)
-		# self._goal_prob = jnp.ones(self._n_tasks) / self._n_tasks
-		# self._interaction_likelihoods = jnp.ones(self._n_tasks)
-		self._goal_prob = jnp.log(jnp.ones(self._n_tasks) / self._n_tasks)
-		self._interaction_likelihoods = jnp.zeros(self._n_tasks)
+		self._goal_prob = jnp.ones(self._n_tasks) / self._n_tasks
+		self._interaction_likelihoods = jnp.ones(self._n_tasks)
+		# self._goal_prob = jnp.log(jnp.ones(self._n_tasks) / self._n_tasks)
+		# self._interaction_likelihoods = jnp.zeros(self._n_tasks)
 		self._predict_task = self._tasks[0]
 	
 	def sample_probability(self, obs: jnp.ndarray, a: int, conf: float) -> jnp.ndarray:
@@ -113,19 +113,21 @@ class TomAgent(Agent):
 			logger.info('[ERROR]: List of possible tasks not defined!!')
 			return ''
 		
-		# if len(self._interaction_likelihoods) > 0:
-		# 	likelihood = jnp.cumprod(jnp.array(self._interaction_likelihoods), axis=0)[-1]
-		# else:
-		# 	likelihood = jnp.zeros(self._n_tasks)
-		# goals_prob = self._goal_prob * likelihoods
-		likelihoods = jnp.cumsum(self._interaction_likelihoods, axis=0)[-1]
-		goals_prob = likelihoods + self._goal_prob
+		if len(self._interaction_likelihoods) > 0:
+			likelihoods = jnp.cumprod(jnp.array(self._interaction_likelihoods), axis=0)[-1]
+		else:
+			likelihoods = jnp.zeros(self._n_tasks)
+		goals_prob = self._goal_prob * likelihoods
+		# likelihoods = jnp.cumsum(self._interaction_likelihoods, axis=0)[-1]
+		# goals_prob = likelihoods + self._goal_prob
 		goals_prob_sum = goals_prob.sum()
 		if goals_prob_sum == 0:
 			p_max = jnp.ones(self._n_tasks) / self._n_tasks
+		elif goals_prob_sum < 1e-24:
+			p_max = jnp.log(goals_prob) - jnp.log(goals_prob_sum)
 		else:
-			# p_max = goals_prob / goals_prob_sum
-			p_max = goals_prob - goals_prob_sum
+			p_max = goals_prob / goals_prob_sum
+			# p_max = goals_prob - goals_prob_sum
 		high_likelihood = jnp.argwhere(p_max == jnp.amax(p_max)).ravel()
 		self._rng_key, subkey = jax.random.split(self._rng_key)
 		return self._tasks[jax.random.choice(subkey, high_likelihood)]
@@ -137,22 +139,22 @@ class TomAgent(Agent):
 			return '', -1
 		
 		states, action = sample
-		sample_prob = jnp.log(self.sample_probability(states, action, conf))
+		sample_prob = self.sample_probability(states, action, conf)
 		self._interaction_likelihoods = jnp.vstack((self._interaction_likelihoods, sample_prob))
 		
-		# likelihoods = jnp.cumprod(self._interaction_likelihoods, axis=0)[-1]
-		# goals_prob = likelihoods * self._goal_prob
-		likelihoods = jnp.cumsum(self._interaction_likelihoods, axis=0)[-1]
-		goals_prob = likelihoods + self._goal_prob
+		likelihoods = jnp.cumprod(self._interaction_likelihoods, axis=0)[-1]
+		goals_prob = likelihoods * self._goal_prob
+		# likelihoods = jnp.cumsum(self._interaction_likelihoods, axis=0)[-1]
+		# goals_prob = likelihoods + self._goal_prob
 		goals_prob_sum = goals_prob.sum()
 		logger.info('Goals prob: ' + str(goals_prob) + ' - ' + str(goals_prob_sum))
 		if goals_prob_sum == 0:
 			p_max = jnp.ones(self._n_tasks) / self._n_tasks
-		# elif goals_prob_sum < 1e-24:
-		# 	p_max = jnp.log(goals_prob) - jnp.log(goals_prob_sum)
+		elif goals_prob_sum < 1e-24:
+			p_max = jnp.log(goals_prob) - jnp.log(goals_prob_sum)
 		else:
-			# p_max = goals_prob / goals_prob_sum
-			p_max = goals_prob - goals_prob_sum
+			p_max = goals_prob / goals_prob_sum
+			# p_max = goals_prob - goals_prob_sum
 		max_idx = jnp.argwhere(p_max == jnp.amax(p_max)).ravel()
 		logger.info('Task probabilities: ' + str(p_max) + ' - ' + str(max_idx))
 		self._rng_key, subkey = jax.random.split(self._rng_key)
@@ -175,7 +177,7 @@ class TomAgent(Agent):
 	def action(self, obs: jnp.ndarray, sample: Tuple[jnp.ndarray, int], conf: float, logger: Logger, task: str = '') -> int:
 		predict_task, predict_conf = self.bayesian_task_inference(sample, conf, logger)
 		self._predict_task = predict_task
-		return self.get_actions(self._predict_task, obs)
+		return self.get_actions(self._predict_task if task == '' else task, obs)
 	
 	def sub_acting(self, obs: jnp.ndarray, logger: Logger, act_try: int, sample: Tuple[jnp.ndarray, int], conf: float, task: str = '') -> int:
 		predict_task, predict_conf = self.bayesian_task_inference(sample, conf, logger)
@@ -458,6 +460,7 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 				preys_left = env.prey_alive_ids.copy()
 				task = preys_left.pop(rng_gen.integers(n_preys_alive))
 				env.target = task
+				logger.info(env.get_env_log())
 		
 		# Update leader and ToM agents' observations
 		logger.info('Preys alive: %s' % ', '.join([str(prey) for prey in env.prey_alive_ids]))
@@ -466,9 +469,6 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 			for idx in range(n_tom_hunters):
 				for prey in env.prey_alive_ids:
 					if prey == tom_agents[idx].predict_task:
-						# for layer in env.make_target_grid_obs(prey)[idx + 1]:
-						# 	print(layer)
-						# input()
 						tom_obs[idx] = env.make_target_grid_obs(prey)[idx + 1].reshape((1, *cnn_shape))
 		else:
 			leader_obs = obs[0]

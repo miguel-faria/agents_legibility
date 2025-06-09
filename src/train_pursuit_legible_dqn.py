@@ -25,7 +25,8 @@ from datetime import datetime
 from gymnasium.spaces import MultiBinary, MultiDiscrete
 from wandb.wandb_run import Run
 
-RNG_SEED = 6102023
+# RNG_SEED = 6102023
+RNG_SEED = 6102025
 TEST_RNG_SEED = 4072023
 N_TESTS = 250
 PREY_TYPES = {'idle': 0, 'greedy': 1, 'random': 2}
