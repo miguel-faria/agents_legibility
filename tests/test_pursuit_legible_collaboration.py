@@ -28,6 +28,7 @@ LEADER_ID = 0
 TOM_ID = 1
 RNG_SEED = 20240729
 CONF = 1.0
+DEADLOCK_HIST_SIZE = 15
 PREY_TYPES = {'idle': 0, 'greedy': 1, 'random': 2}
 
 
@@ -219,10 +220,6 @@ def is_deadlock(history: List, new_state: str, last_actions: Tuple) -> bool:
 		return False
 	
 	deadlock = True
-	# if all([act == Action.NONE for act in last_actions]) or all([act == Action.LOAD for act in last_actions]):
-	# 	return False
-	#
-	# else:
 	state_repitition = 0
 	for state in history:
 		if new_state == state:
@@ -479,12 +476,13 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 		
 		current_state = ''.join([''.join(str(x) for x in env.agents[a_id].pos) for a_id in env.agents.keys() if env.agents[a_id].alive])
 		if is_deadlock(recent_states, current_state, actions):
+			logger.info('Deadlock detected at step %d in state %s, executing sub-action' % (n_steps, current_state))
 			n_deadlocks += 1
 			if current_state not in deadlock_states:
 				deadlock_states.append(current_state)
 			act_try += 1
 			actions = (leader_agent.sub_acting(leader_obs, logger, act_try - 1, last_leader_sample, CONF, 'p%d' % n_preys_alive),
-			           *[tom_agents[idx].sub_acting(tom_obs[idx], logger, act_try, last_leader_sample, CONF, 'p%d' % n_preys_alive)for idx in range(n_tom_hunters)])
+			           *[tom_agents[idx].sub_acting(tom_obs[idx], logger, act_try, last_leader_sample, CONF, 'p%d' % n_preys_alive) for idx in range(n_tom_hunters)])
 			# actions = (leader_agent.action(leader_obs, last_leader_sample, CONF, logger, task), tom_agent.sub_acting(tom_obs, logger, act_try, last_leader_sample, CONF))
 		else:
 			act_try = 0
@@ -496,7 +494,7 @@ def run_test_iteration(start_optim_models: Dict, start_leg_models: Dict, logger:
 			actions += (prey_agents[prey_id].act(env) if prey_id in env.prey_alive_ids else Action.STAY.value, )
 		
 		recent_states.append(current_state)
-		if len(recent_states) > 3:
+		if len(recent_states) > DEADLOCK_HIST_SIZE:
 			recent_states.pop(0)
 	
 	env.close()

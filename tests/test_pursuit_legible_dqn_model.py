@@ -43,25 +43,25 @@ def main():
 	dueling_dqn = True
 	use_ddqn = True
 	use_cnn = True
-	use_render = True
+	use_render = False
 	n_hunters = 2
-	n_legible_agents = 2
-	n_preys = 2
-	n_spawn_preys = 2
+	n_legible_agents = 0
+	n_spawn_preys = 6
+	min_preys = 1
 	hunter_ids = ['h%d' % i for i in range(1, n_hunters + 1)]
 	field_size = (10, 10)
 	sight = field_size[0]
-	prey_ids = ['p%d' % i for i in range(1, n_preys + 1)]
+	prey_ids = ['p%d' % i for i in range(1, n_spawn_preys + 1)]
 	prey_type = 'random'
 	n_catch = 2
 	catch_reward = 5
-	max_steps = 50
-	n_cycles = 10
+	max_steps = 600
+	n_cycles = 100
 	hunters = []
 	preys = []
 	for idx in range(n_hunters):
 		hunters += [(hunter_ids[idx], 1)]
-	for idx in range(n_preys):
+	for idx in range(n_spawn_preys):
 		preys += [(prey_ids[idx], PREY_TYPES[prey_type])]
 	
 	os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
@@ -87,7 +87,7 @@ def main():
 	print('#########################')
 	print('Environment setup')
 	rng_gen = np.random.default_rng(TEST_RNG_SEED)
-	env = TargetPursuitEnv(hunters, preys, field_size, sight, prey_ids[rng_gen.integers(n_preys)], n_catch, max_steps, use_layer_obs=True, agent_centered=True, catch_reward=catch_reward)
+	env = TargetPursuitEnv(hunters, preys, field_size, sight, prey_ids[rng_gen.integers(n_spawn_preys)], n_catch, max_steps, use_layer_obs=True, agent_centered=True, catch_reward=catch_reward)
 	env.seed(TEST_RNG_SEED)
 	if isinstance(env.observation_space, MultiBinary):
 		obs_space = MultiBinary([*env.observation_space.shape[1:]])
@@ -98,8 +98,6 @@ def main():
 	legible_dqn_model = DQNetwork(env.action_space[0].n, n_layers, nn.relu, layer_sizes, gamma, dueling_dqn, use_ddqn, use_cnn, cnn_properties=cnn_properties)
 	optim_dqn_model = DQNetwork(env.action_space[0].n, n_layers, nn.relu, layer_sizes, gamma, dueling_dqn, use_ddqn, use_cnn, cnn_properties=cnn_properties)
 	obs_shape = (0,) if not use_cnn else (*obs_space.shape[1:], obs_space.shape[0])
-	legible_dqn_model.load_model(('%d-preys_single_model.model' % n_spawn_preys), legible_model_path, None, obs_shape, False)
-	optim_dqn_model.load_model(('%d-preys_single_model.model' % n_spawn_preys), optimal_model_path, None, obs_shape, False)
 	
 	prey_agents = {}
 	for i, prey_id in enumerate(prey_ids):
@@ -112,18 +110,23 @@ def main():
 	
 	print('Testing trained model')
 	np.random.seed(TEST_RNG_SEED)
-	for _ in range(n_cycles):
+	avg_epochs = 0
+	for it in range(n_cycles):
+		legible_dqn_model.load_model(('%d-preys_single_model.model' % n_spawn_preys), legible_model_path, None, obs_shape, False)
+		optim_dqn_model.load_model(('%d-preys_single_model.model' % n_spawn_preys), optimal_model_path, None, obs_shape, False)
 		obs, *_ = env.reset()
 		epoch = 0
 		history = []
 		game_over = False
 		if use_render:
 			env.render()
+		print('Iteration: %d' % (it + 1))
 		print('Agents: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[hunter].agent_id, *env.agents[hunter].pos) for hunter in env.hunter_ids]))
 		print('Preys: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[prey].agent_id, *env.agents[prey].pos) for prey in env.prey_alive_ids]))
 		print('Objective prey: %s @ (%d, %d)' % (env.target, *env.agents[env.target].pos))
+		n_preys_alive = n_spawn_preys
 		# input()
-		while not game_over:
+		while n_preys_alive > min_preys:
 			
 			actions = []
 			for a_idx in range(env.n_hunters):
@@ -155,8 +158,8 @@ def main():
 				action = jax.device_get(action)
 				actions += [action]
 				
-			for prey_id in env.prey_alive_ids:
-				actions += [prey_agents[prey_id].act(env)]
+			for prey_id in env.prey_ids:
+				actions += [prey_agents[prey_id].act(env) if prey_id in env.prey_alive_ids else Action.STAY.value]
 			
 			actions = np.array(actions)
 			print('Actions: ', ' '.join([str(Action(action).name) for action in actions]))
@@ -168,13 +171,27 @@ def main():
 				env.render()
 			# input()
 			
-			if finished or timeout:
-				game_over = True
-				env.target = prey_ids[rng_gen.integers(n_preys)]
+			if env.n_preys_alive < n_preys_alive:
+				print('A prey was caught!')
+				n_preys_alive = env.n_preys_alive
+				preys_left = env.prey_alive_ids.copy()
+				task = preys_left.pop(rng_gen.integers(n_preys_alive))
+				env.target = task
+				legible_dqn_model.load_model(('%d-preys_single_model.model' % n_preys_alive), legible_model_path, None, obs_shape, False)
+				optim_dqn_model.load_model(('%d-preys_single_model.model' % n_preys_alive), optimal_model_path, None, obs_shape, False)
+				print('Agents: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[hunter].agent_id, *env.agents[hunter].pos) for hunter in env.hunter_ids]))
+				print('Preys: ' + ', '.join(['%s @ (%d, %d)' % (env.agents[prey].agent_id, *env.agents[prey].pos) for prey in env.prey_alive_ids]))
+				print('Objective prey: %s @ (%d, %d)' % (env.target, *env.agents[env.target].pos))
+			elif timeout:
+				print('Game finished due to timeout.')
+				break
 			
 			sys.stdout.flush()
 		
 		print('Epochs needed to finish: %d' % epoch)
+		avg_epochs += epoch / n_cycles
+		
+	print('On average, %d epochs were needed to finish the game.' % avg_epochs)
 	
 
 if __name__ == '__main__':

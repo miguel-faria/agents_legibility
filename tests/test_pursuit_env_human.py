@@ -59,7 +59,8 @@ def main():
 		
 		print('Iteration: %d\tStep: %d' % (it + 1, i + 1))
 		actions = []
-		for agent_id in hunter_ids:
+		# for agent_id in hunter_ids:
+		for agent_id in env.agents.keys():
 			valid_action = False
 			while not valid_action:
 				human_input = input("Action for agent %s:\t" % agent_id)
@@ -70,7 +71,7 @@ def main():
 				else:
 					print('Action ID must be between 0 and 4, you gave ID %d' % action)
 		# actions += env.action_space.sample()[n_hunters:].tolist()
-		actions += [env.agents[p_id].act(env) for p_id in env.prey_alive_ids]
+		# actions += [env.agents[p_id].act(env) for p_id in env.prey_alive_ids]
 		print(env.prey_alive_ids, env.target)
 		# for prey_id in prey_ids:
 		# 	valid_action = False
