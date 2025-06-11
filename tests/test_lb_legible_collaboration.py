@@ -454,7 +454,7 @@ def main():
 	leg_models_dir = models_dir / ('lb_coop_legible%s_dqn' % ('_vdn' if use_vdn else '')) / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-agents' % n_agents)
 	opt_models_dir = models_dir / ('lb_coop_single%s_dqn' % ('_vdn' if use_vdn else '')) / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-agents' % n_agents)
 	
-	with open(data_dir / 'configs' / 'lbforaging_plan_configs.yaml') as config_file:
+	with open(data_dir / 'configs' / 'lb_foraging' / 'field_configs.yaml') as config_file:
 		config_params = yaml.safe_load(config_file)
 		dict_idx = str(field_size[0]) + 'x' + str(field_size[1])
 		assert dict_idx in list(config_params['food_locs'].keys())

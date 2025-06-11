@@ -25,8 +25,9 @@ from datetime import datetime
 from gymnasium.spaces import MultiBinary, MultiDiscrete
 from wandb.wandb_run import Run
 
-# RNG_SEED = 6102023
-RNG_SEED = 6102025
+# # RNG_SEED = 6102023
+# RNG_SEED = 6102025
+RNG_SEED = 3062025
 TEST_RNG_SEED = 4072023
 N_TESTS = 250
 PREY_TYPES = {'idle': 0, 'greedy': 1, 'random': 2}
@@ -103,7 +104,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					hunter_actions = env.action_space.sample().tolist()[:env.n_hunters]
 					prey_actions = [env.agents[prey_id].act(env) for prey_id in env.prey_alive_ids]
 					actions = np.array(hunter_actions + prey_actions)
-					
+
 				else:
 					actions = []
 					for a_idx in range(env.n_hunters):
@@ -175,10 +176,10 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 							legible_rewards[a_idx] = (act_q_vals[live_goals.index(dqn_target)] / act_q_vals.sum()) + rewards[a_idx]
 						else:
 							legible_rewards[a_idx] = act_q_vals[live_goals.index(dqn_target)] / act_q_vals.sum()
-					
+
 					for a_idx in range(dqn_model.n_leg_agents, env.n_hunters):
 						legible_rewards[a_idx] = rewards[a_idx]
-				
+
 				else:
 					legible_rewards = rewards[:env.n_hunters]
 				
@@ -243,6 +244,7 @@ def train_pursuit_legible_dqn(dqn_model: LegibleSingleMADQN, env: TargetPursuitE
 					episode_start = epoch
 					# epoch = 0
 					dqn_target = env.target
+					avg_loss = []
 		
 	except ValueError as err:
 		logger.error(str(err) + '\n' + traceback.format_exc())

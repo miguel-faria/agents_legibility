@@ -64,7 +64,7 @@ if [ "$env_type" = "conda" ]; then
   source "$conda_home"/etc/profile.d/conda.sh
   mamba activate "$env_name"
 
-  mamba install -y -c conda-forge numpy scipy matplotlib pandas sympy nose pyyaml termcolor tqdm scikit-learn opencv
+  mamba install -y -c conda-forge numpy scipy matplotlib pandas sympy nose pyyaml termcolor rich scikit-learn opencv
   if [ "$cuda_version" = 11 ] && [ "$cuda_minor" -ge 8 ]; then
     echo "Installing PyTorch for Cuda $cuda_version.$cuda_minor"
     mamba install -y pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
@@ -136,7 +136,7 @@ else
   source "$HOME/python_envs/$env_name/bin/activate"
 
   python3 -m pip install --upgrade pip
-  python3 -m pip install numpy scipy matplotlib ipython jupyter pandas sympy nose pyyaml termcolor tqdm scikit-learn opencv-python gym pyglet
+  python3 -m pip install numpy scipy matplotlib ipython jupyter pandas sympy nose pyyaml termcolor rich scikit-learn opencv-python gym pyglet
   python3 -m pip install stable-baselines3 tensorboard wandb gymnasium pygame
   if [ "$cuda_version" = 11 ] && [ "$cuda_minor" -ge 8 ]; then
     echo "Installing PyTorch for Cuda $cuda_version.$cuda_minor"

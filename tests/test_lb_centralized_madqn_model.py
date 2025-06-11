@@ -117,7 +117,7 @@ def main():
 																								   food_level, model_name))
 	model_path = (models_dir / 'lb_coop_central_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-agents' % n_agents) /
 				  ('%d-foods_%d-food-level' % (n_foods_spawn, food_level)) / model_dirname)
-	with open(data_dir / 'configs' / 'lbforaging_plan_configs.yaml') as file:
+	with open(data_dir / 'configs' / 'lb_foraging' / 'field_configs.yaml') as file:
 		config_params = yaml.full_load(file)
 		dict_idx = str(field_size[0]) + 'x' + str(field_size[1]) + '_food_locs'
 		if dict_idx in config_params.keys():

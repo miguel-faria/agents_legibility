@@ -1,0 +1,48 @@
+field:  ["XXXXXXXXXXXXXXX",
+         "XXXXXXXXXXXXXXX",
+         "XXXXXXXXXXXXXXX",
+         "XXXXXXXXXXXXXXX",
+         "XXXXXXXXXXDXXXX",
+         "XXXX   R   XXXX",
+         "XXXX       XXXX",
+         "XXXX 2 X   XXXX",
+         "XXXX XXXXX XXXX",
+         "XXXX  G Y  XXXX",
+         "XXXX 1     XXXX",
+         "XXXXXXXXXXXXXXX",
+         "XXXXXXXXXXXXXXX",
+         "XXXXXXXXXXXXXXX",
+         "XXXXXXXXXXXXXXX",
+         "XXXXXXXXXXXXXXX"]
+
+players: [
+  { orientation: [1, 0], id: 1, name: 'human', type: 'human' },
+  { orientation: [1, 0], id: 2, name: 'astro', type: 'robot' }
+  ]
+
+objects : {
+  unspecified: ['object_1', 'object_2', 'object_3'],
+  red: {
+         ids: ['red_1'],
+         points: -5,
+         time_penalty: 0
+  },
+  yellow: {
+         ids: ['yellow_1'],
+         points: 10,
+         time_penalty: 5
+  },
+  green: {
+         ids: ['green_1'],
+         points: 1,
+         time_penalty: 0
+  }
+}
+
+slip_prob: 0.1
+
+sight: -1
+
+max_game_time: 200.0
+
+max_train_time: 600

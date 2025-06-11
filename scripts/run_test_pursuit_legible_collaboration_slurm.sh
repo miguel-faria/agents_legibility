@@ -111,6 +111,7 @@ if [ "$HOSTNAME" = "artemis" ] || [ "$HOSTNAME" = "poseidon" ] || [ "$HOSTNAME" 
 #SBATCH --cpus-per-task=1
 #SBATCH --tasks-per-node=1
 #SBATCH --gres=gpu:1
+# #SBATCH --gres=gpu:quadro6000:1
 #SBATCH --time=04:00:00
 #SBATCH --mem=8G
 #SBATCH --qos=gpu-short
@@ -132,6 +133,7 @@ EOF
 #SBATCH --cpus-per-task=1
 #SBATCH --tasks-per-node=1
 #SBATCH --gres=gpu:1
+# #SBATCH --gres=gpu:quadro6000:1
 #SBATCH --time=04:00:00
 #SBATCH --mem=8G
 #SBATCH --qos=gpu-short

@@ -111,7 +111,7 @@ def main():
 	log_filename = ('train_lb_non_hierarchy_dqn_%dx%d-field_%d-agents_%d-foods_%d-food-level' % (field_size[0], field_size[1], n_agents, n_foods, food_level))
 	model_path = (models_dir / 'lb_non_hierarchy_dqn' / ('%dx%d-field' % (field_size[0], field_size[1])) / ('%d-agents' % n_agents) /
 				  ('%d-foods_%d-food-level' % (n_foods, food_level)))
-	with open(data_dir / 'configs' / 'lbforaging_plan_configs.yaml') as file:
+	with open(data_dir / 'configs' / 'lb_foraging' / 'field_configs.yaml') as file:
 		config_params = yaml.full_load(file)
 		dict_idx = str(field_size[0]) + 'x' + str(field_size[1]) + '_food_locs_non_hierarchy'
 		if dict_idx in config_params.keys():

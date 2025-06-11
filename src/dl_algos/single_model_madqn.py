@@ -698,7 +698,7 @@ class CentralizedMADQN(object):
 		
 		return history
 	
-	def update_model(self, batch_size):
+	def update_model(self, batch_size: int):
 		data = self._replay_buffer.sample(batch_size)
 		observations = data.observations
 		next_observations = data.next_observations

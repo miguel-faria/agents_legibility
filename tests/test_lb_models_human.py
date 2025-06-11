@@ -40,7 +40,7 @@ def main():
 	data_dir = Path(__file__).parent.absolute().parent.absolute() / 'data'
 	models_dir = Path(__file__).parent.absolute().parent.absolute() / 'models'
 	log_dir = Path(__file__).parent.absolute().parent.absolute() / 'logs' / 'lb_foraging'
-	with open(data_dir / 'configs' / 'lbforaging_plan_configs.yaml') as file:
+	with open(data_dir / 'configs' / 'lb_foraging' / 'field_configs.yaml') as file:
 		config_params = yaml.full_load(file)
 		dict_idx = str(field_size[0]) + 'x' + str(field_size[1])
 		if dict_idx in config_params['food_locs'].keys():

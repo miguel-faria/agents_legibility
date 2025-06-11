@@ -6,7 +6,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+# #SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:quadro6000:1
 #SBATCH --time=2-00:00:00
 #SBATCH --mem=4G
 #SBATCH --qos=gpu-medium
